@@ -10,7 +10,7 @@ namespace HeimrichHannot\MigrationBundle;
 use HeimrichHannot\MigrationBundle\DependencyInjection\HeimrichHannotMigrationExtension;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
-class HeimrichHannotBegBundle extends Bundle
+class HeimrichHannotMigrationBundle extends Bundle
 {
     /**
      * {@inheritdoc}
