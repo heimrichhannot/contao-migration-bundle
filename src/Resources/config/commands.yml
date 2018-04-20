@@ -1,0 +1,11 @@
+services:
+    _defaults:
+        autoconfigure: true
+
+    _instanceof:
+        Contao\CoreBundle\Framework\FrameworkAwareInterface:
+            calls:
+                - ["setFramework", ["@contao.framework"]]
+
+    migration.module.newsreader:
+        class: HeimrichHannot\MigrationBundle\Command\NewsReaderModuleMigrationCommand
