@@ -12,8 +12,11 @@ namespace HeimrichHannot\MigrationBundle\Command;
 use Contao\CoreBundle\Command\AbstractLockedCommand;
 use Contao\CoreBundle\Framework\FrameworkAwareInterface;
 use Contao\CoreBundle\Framework\FrameworkAwareTrait;
+use Contao\Model\Collection;
+use Contao\ModuleModel;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -34,7 +37,7 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
     /**
      * A collection of models or null if there are no
      *
-     * @var array
+     * @var \Contao\Model\Collection|\Contao\ModuleModel[]|\Contao\ModuleModel|null
      */
     protected $modules;
 
@@ -54,6 +57,14 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
     protected $output;
 
     /**
+     * @inheritdoc
+     */
+    protected function configure()
+    {
+        $this->addOption('types', 't', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'What module types should be migrated?', static::$types);
+    }
+
+    /**
      * {@inheritdoc}
      */
     protected function executeLocked(InputInterface $input, OutputInterface $output)
@@ -67,14 +78,16 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
 
         $this->queryBuilder = new QueryBuilder($this->getContainer()->get('doctrine.dbal.default_connection'));
 
-        if (empty(static::$types)) {
+        $types = array_intersect(static::$types, $input->getOption('types'));
+
+        if (empty($types)) {
             $output->writeln('No valid types provided within command.');
 
             return 1;
         }
 
         if (empty($this->modules = $this->collect())) {
-            $output->writeln('No modules of types' . implode(",", static::$types) . ' could be found.');
+            $output->writeln('No modules of types' . implode(",", $types) . ' could be found.');
 
             return 1;
         }
@@ -88,7 +101,7 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
      * Run custom migration on each module
      * @return mixed
      */
-    abstract protected function migrate(array $module): int;
+    abstract protected function migrate(ModuleModel $module): int;
 
     /**
      * Migrate all modules
@@ -103,14 +116,16 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
     /**
      * Collect modules
      *
-     * @return array
+     * @return \Contao\Model\Collection|\Contao\ModuleModel[]|\Contao\ModuleModel|null
      */
-    protected function collect()
+    protected function collect(): ?Collection
     {
-        $query = $this->queryBuilder->select('*')->from('tl_module')->where($this->queryBuilder->expr()->in('type', array_map(function ($type) {
-            return '"' . addslashes($type) . '"';
-        }, static::$types)));
+        $options['column'] = [
+            'tl_module.type IN (' . implode(',', array_map(function ($type) {
+                return '"' . addslashes($type) . '"';
+            }, static::$types)) . ')'
+        ];
 
-        return $query->execute()->fetchAll();
+        return ModuleModel::findAll($options);
     }
 }
