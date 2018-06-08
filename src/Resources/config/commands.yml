@@ -9,3 +9,5 @@ services:
 
     migration.module.newsreader:
         class: HeimrichHannot\MigrationBundle\Command\NewsReaderModuleMigrationCommand
+    migration.db.news_categories:
+        class: HeimrichHannot\MigrationBundle\Command\NewsCategoriesMigrationCommand

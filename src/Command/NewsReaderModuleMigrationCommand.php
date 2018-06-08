@@ -4,6 +4,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 use function Clue\StreamFilter\remove;
 use Contao\ModuleModel;
+use Contao\StringUtil;
 use Contao\System;
 use HeimrichHannot\FilterBundle\Model\FilterConfigElementModel;
 use HeimrichHannot\FilterBundle\Model\FilterConfigModel;
@@ -111,6 +112,58 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
     {
         $this->attachReaderImageElement();
         $this->addNavigationElement();
+        $this->addSyndicationElement();
+    }
+
+    protected function addSyndicationElement()
+    {
+        if (false == (bool)$this->module->addShare) {
+            return 1;
+        }
+
+        $readerConfigElement                      = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
+        $readerConfigElement->tstamp              = time();
+        $readerConfigElement->dateAdded           = time();
+        $readerConfigElement->pid                 = $this->readerConfig->id;
+        $readerConfigElement->title               = 'Syndikation';
+        $readerConfigElement->type                = 'syndication';
+        $readerConfigElement->name                = 'syndications';
+        $readerConfigElement->syndicationTemplate = 'readersyndication_fontawesome_bootstrap4_button_group';
+
+        $syndications = StringUtil::deserialize($this->module->share_buttons, true);
+
+        if (isset($syndications['pdfButton'])) {
+            $readerConfigElement->syndicationPdf         = true;
+        }
+
+        if (isset($syndications['printButton'])) {
+            $readerConfigElement->syndicationPrint         = true;
+            $readerConfigElement->syndicationPrintTemplate = true;
+        }
+
+        if (isset($syndications['facebook'])) {
+            $readerConfigElement->syndicationFacebook = true;
+        }
+
+        if (isset($syndications['twitter'])) {
+            $readerConfigElement->syndicationTwitter = true;
+        }
+
+        if (isset($syndications['gplus'])) {
+            $readerConfigElement->syndicationGooglePlus = true;
+        }
+
+        if (isset($syndications['mailto'])) {
+            $readerConfigElement->syndicationMail = true;
+        }
+
+        if ($readerConfigElement->id > 0) {
+            $this->readerConfigElements[] = $readerConfigElement;
+
+            return 0;
+        }
+
+        return 1;
     }
 
     protected function addNavigationElement()

@@ -61,6 +61,7 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
      */
     protected function configure()
     {
+        $this->addOption('id', 'i', InputOption::VALUE_OPTIONAL, 'Provide the id of a single module that should be migrated.');
         $this->addOption('types', 't', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'What module types should be migrated?', static::$types);
     }
 
@@ -86,7 +87,7 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
             return 1;
         }
 
-        if (empty($this->modules = $this->collect())) {
+        if (empty($this->modules = $this->collect($input->getOption('id')))) {
             $output->writeln('No modules of types' . implode(",", $types) . ' could be found.');
 
             return 1;
@@ -115,16 +116,22 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
 
     /**
      * Collect modules
+     * @param int $id
      *
      * @return \Contao\Model\Collection|\Contao\ModuleModel[]|\Contao\ModuleModel|null
      */
-    protected function collect(): ?Collection
+    protected function collect(int $id = null): ?Collection
     {
         $options['column'] = [
             'tl_module.type IN (' . implode(',', array_map(function ($type) {
                 return '"' . addslashes($type) . '"';
             }, static::$types)) . ')'
         ];
+
+        if ($id > 0) {
+            $options['column'][] = 'tl_module.id = ?';
+            $options['value'][]  = $id;
+        }
 
         return ModuleModel::findAll($options);
     }
