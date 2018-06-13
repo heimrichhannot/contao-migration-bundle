@@ -56,7 +56,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
     protected function configure()
     {
         $this->setName('migration:module:newsreader')->setDescription(
-            'Migration of tl_module type:newsreaser modules to huhreader and creates reader configurations from old tl_module settings.'
+            'Migration of tl_module type:newsreader modules to huhreader and creates reader configurations from old tl_module settings.'
         );
 
         parent::configure();
@@ -216,7 +216,6 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
         return 1;
     }
 
-
     protected function attachFilter()
     {
         $this->filterConfig                = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
@@ -248,108 +247,109 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
         return 1;
     }
 
-    protected function attachFilterElements()
-    {
-        $sorting = 2;
-        $sorting = $this->addParentFilterElement($sorting);
-        $sorting = $this->addPublishedFilter($sorting);
-    }
 
-    protected function addPublishedFilter($sorting)
-    {
-        $filterElement                  = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->title           = 'Published';
-        $filterElement->pid             = $this->filterConfig->id;
-        $filterElement->sorting         = $sorting;
-        $filterElement->tstamp          = time();
-        $filterElement->dateAdded       = time();
-        $filterElement->type            = 'visible';
-        $filterElement->field           = 'published';
-        $filterElement->published       = 1;
-        $filterElement->addStartAndStop = 1;
-        $filterElement->startField      = 'start';
-        $filterElement->stopField       = 'stop';
-        $filterElement->save();
+//    protected function attachFilterElements()
+//    {
+//        $sorting = 2;
+//        $sorting = $this->addParentFilterElement($sorting);
+//        $sorting = $this->addPublishedFilter($sorting);
+//    }
+//
+//    protected function addPublishedFilter($sorting)
+//    {
+//        $filterElement                  = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
+//        $filterElement->title           = 'Published';
+//        $filterElement->pid             = $this->filterConfig->id;
+//        $filterElement->sorting         = $sorting;
+//        $filterElement->tstamp          = time();
+//        $filterElement->dateAdded       = time();
+//        $filterElement->type            = 'visible';
+//        $filterElement->field           = 'published';
+//        $filterElement->published       = 1;
+//        $filterElement->addStartAndStop = 1;
+//        $filterElement->startField      = 'start';
+//        $filterElement->stopField       = 'stop';
+//        $filterElement->save();
+//
+//        if ($filterElement->id > 0) {
+//            $this->filterConfigElements[] = $filterElement;
+//            return $sorting * 2;
+//        }
+//
+//        return $sorting;
+//    }
+//
+//    protected function addParentFilterElement($sorting)
+//    {
+//        $pids = \Contao\StringUtil::deserialize($this->module->news_archives, true);
+//
+//        if (empty($pids)) {
+//            return $sorting;
+//        }
+//
+//        $initialValueArray = [];
+//        foreach ($pids as $pid) {
+//            $initialValueArray[] = ['value' => $pid];
+//        }
+//
+//        $filterElement                    = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
+//        $filterElement->title             = 'Parent';
+//        $filterElement->pid               = $this->filterConfig->id;
+//        $filterElement->sorting           = $sorting;
+//        $filterElement->tstamp            = time();
+//        $filterElement->dateAdded         = time();
+//        $filterElement->type              = 'parent';
+//        $filterElement->isInitial         = 1;
+//        $filterElement->operator          = DatabaseUtil::OPERATOR_IN;
+//        $filterElement->field             = 'pid';
+//        $filterElement->initialValueType  = 'array';
+//        $filterElement->initialValueArray = serialize($initialValueArray);
+//        $filterElement->published         = 1;
+//        $filterElement->save();
+//
+//        if ($filterElement->id > 0) {
+//            $this->filterConfigElements[] = $filterElement;
+//            return $sorting * 2;
+//        }
+//
+//        return $sorting;
+//    }
 
-        if ($filterElement->id > 0) {
-            $this->filterConfigElements[] = $filterElement;
-            return $sorting * 2;
-        }
+//    protected function copyNewsTemplate()
+//    {
+//        $templatePath     = \Controller::getTemplate($this->module->news_template);
+//        $twigTemplatePath = $this->getContainer()->get('huh.utils.container')->getProjectDir() . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $this->module->news_template . '.html.twig';
+//
+//        if (!file_exists($twigTemplatePath)) {
+//            $fileSystem = new Filesystem();
+//
+//            try {
+//                $fileSystem->copy($templatePath, $twigTemplatePath);
+//                $this->output->writeln('Created copy of existing template to ' . $this->module->news_template . '.html.twig template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.');
+//            } catch (FileNotFoundException $e) {
+//                $this->output->writeln('Could not copy news_template: ' . $this->module->news_template . ', which file does not exist.');
+//                return 1;
+//            } catch (IOException $e) {
+//                $this->output->writeln('An error occurred while copy news_template from ' . $templatePath . ' to ' . $twigTemplatePath . '.');
+//                return 1;
+//            }
+//        }
+//
+//        return 0;
+//    }
 
-        return $sorting;
-    }
-
-    protected function addParentFilterElement($sorting)
-    {
-        $pids = \Contao\StringUtil::deserialize($this->module->news_archives, true);
-
-        if (empty($pids)) {
-            return $sorting;
-        }
-
-        $initialValueArray = [];
-        foreach ($pids as $pid) {
-            $initialValueArray[] = ['value' => $pid];
-        }
-
-        $filterElement                    = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->title             = 'Parent';
-        $filterElement->pid               = $this->filterConfig->id;
-        $filterElement->sorting           = $sorting;
-        $filterElement->tstamp            = time();
-        $filterElement->dateAdded         = time();
-        $filterElement->type              = 'parent';
-        $filterElement->isInitial         = 1;
-        $filterElement->operator          = DatabaseUtil::OPERATOR_IN;
-        $filterElement->field             = 'pid';
-        $filterElement->initialValueType  = 'array';
-        $filterElement->initialValueArray = serialize($initialValueArray);
-        $filterElement->published         = 1;
-        $filterElement->save();
-
-        if ($filterElement->id > 0) {
-            $this->filterConfigElements[] = $filterElement;
-            return $sorting * 2;
-        }
-
-        return $sorting;
-    }
-
-    protected function copyNewsTemplate()
-    {
-        $templatePath     = \Controller::getTemplate($this->module->news_template);
-        $twigTemplatePath = $this->getContainer()->get('huh.utils.container')->getProjectDir() . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $this->module->news_template . '.html.twig';
-
-        if (!file_exists($twigTemplatePath)) {
-            $fileSystem = new Filesystem();
-
-            try {
-                $fileSystem->copy($templatePath, $twigTemplatePath);
-                $this->output->writeln('Created copy of existing template to ' . $this->module->news_template . '.html.twig template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.');
-            } catch (FileNotFoundException $e) {
-                $this->output->writeln('Could not copy news_template: ' . $this->module->news_template . ', which file does not exist.');
-                return 1;
-            } catch (IOException $e) {
-                $this->output->writeln('An error occurred while copy news_template from ' . $templatePath . ' to ' . $twigTemplatePath . '.');
-                return 1;
-            }
-        }
-
-        return 0;
-    }
-
-    protected function updateModule()
-    {
-        $this->module->tstamp       = time();
-        $this->module->readerConfig = $this->readerConfig->id;
-        $this->module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
-
-        if ($this->module->save()) {
-            $this->output->writeln('Updated "' . $this->module->name . '" (Module ID:' . $this->module->id . ') and set new reader config ID: ' . $this->readerConfig->id . '.');
-
-            return 0;
-        }
-
-        return 1;
-    }
+//    protected function updateModule()
+//    {
+//        $this->module->tstamp       = time();
+//        $this->module->readerConfig = $this->readerConfig->id;
+//        $this->module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
+//
+//        if ($this->module->save()) {
+//            $this->output->writeln('Updated "' . $this->module->name . '" (Module ID:' . $this->module->id . ') and set new reader config ID: ' . $this->readerConfig->id . '.');
+//
+//            return 0;
+//        }
+//
+//        return 1;
+//    }
 }

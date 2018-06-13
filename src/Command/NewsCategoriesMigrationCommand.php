@@ -10,6 +10,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
+use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
 use Contao\CoreBundle\Framework\FrameworkAwareInterface;
 use Contao\CoreBundle\Framework\FrameworkAwareTrait;
 use Contao\System;
@@ -21,9 +22,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-class NewsCategoriesMigrationCommand extends AbstractLockedCommand implements FrameworkAwareInterface
+class NewsCategoriesMigrationCommand extends AbstractLockedCommand
 {
-    use FrameworkAwareTrait;
 
     /**
      * @var QueryBuilder
@@ -55,6 +55,17 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand implements Fr
      * @var string
      */
     protected $field;
+    /**
+     * @var ContaoFrameworkInterface
+     */
+    private $framework;
+
+    public function __construct(ContaoFrameworkInterface $framework)
+    {
+        parent::__construct();
+        $this->framework = $framework;
+    }
+
 
     /**
      * {@inheritdoc}

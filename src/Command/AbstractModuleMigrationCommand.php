@@ -10,8 +10,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
-use Contao\CoreBundle\Framework\FrameworkAwareInterface;
-use Contao\CoreBundle\Framework\FrameworkAwareTrait;
+use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
 use Contao\Model\Collection;
 use Contao\ModuleModel;
 use Doctrine\DBAL\Query\QueryBuilder;
@@ -20,9 +19,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand implements FrameworkAwareInterface
+abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
 {
-    use FrameworkAwareTrait;
 
     /**
      * @var SymfonyStyle
@@ -55,6 +53,17 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
      * @var OutputInterface
      */
     protected $output;
+    /**
+     * @var ContaoFrameworkInterface
+     */
+    protected $framework;
+
+    public function __construct(ContaoFrameworkInterface $framework)
+    {
+        $this->framework = $framework;
+        parent::__construct();
+    }
+
 
     /**
      * @inheritdoc
@@ -75,6 +84,10 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
         $this->io      = new SymfonyStyle($input, $output);
         $this->input   = $input;
         $this->output  = $output;
+
+        $this->io->newLine();
+        $this->output->writeln("<fg=green>Start migration for module of type: ".implode(static::$types)."</>");
+
         $this->rootDir = $this->getContainer()->getParameter('kernel.project_dir');
 
         $this->queryBuilder = new QueryBuilder($this->getContainer()->get('doctrine.dbal.default_connection'));
@@ -82,13 +95,14 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
         $types = array_intersect(static::$types, $input->getOption('types'));
 
         if (empty($types)) {
-            $output->writeln('No valid types provided within command.');
+
+            $this->io->error('No valid types provided within command.');
 
             return 1;
         }
 
         if (empty($this->modules = $this->collect($input->getOption('id')))) {
-            $output->writeln('No modules of types' . implode(",", $types) . ' could be found.');
+            $this->io->note('No modules of types' . implode(",", $types) . ' could be found.');
 
             return 1;
         }
@@ -109,9 +123,13 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand impl
      */
     protected function migrateAll()
     {
+        $this->io->section("Migration");
+        $this->io->progressStart($this->modules->count());
         foreach ($this->modules as $module) {
+            $this->io->progressAdvance();
             $this->migrate($module);
         }
+        $this->io->progressFinish();
     }
 
     /**

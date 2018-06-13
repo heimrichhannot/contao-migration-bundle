@@ -1,0 +1,27 @@
+services:
+  _defaults:
+    autoconfigure: true
+
+# Commands
+
+  ## Module Commands
+
+  huh.migration.module.abstract:
+    class: HeimrichHannot\MigrationBundle\Command\AbstractModuleMigrationCommand
+    arguments: ['@?', '@contao.framework']
+
+  huh.migration.module.newsreader:
+    class: HeimrichHannot\MigrationBundle\Command\NewsReaderModuleMigrationCommand
+    arguments: ['@contao.framework']
+
+  huh.migration.module.newsplus:
+    class: HeimrichHannot\MigrationBundle\Command\NewsPlusModuleMigrationCommand
+    arguments: ['@contao.framework', '@huh.utils.model', '@translator']
+
+
+  ## Database Commands
+
+  huh.migration.database.newscategories:
+    class: HeimrichHannot\MigrationBundle\Command\NewsCategoriesMigrationCommand
+    arguments: ['@contao.framework']
+
