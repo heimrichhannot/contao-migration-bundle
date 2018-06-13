@@ -35,6 +35,7 @@ use HeimrichHannot\ListBundle\Model\ListConfigElementModel;
 use HeimrichHannot\ListBundle\Model\ListConfigModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigModel;
+use HeimrichHannot\ReaderBundle\Module\ModuleReader;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
 use HeimrichHannot\UtilsBundle\Model\ModelUtil;
 use Symfony\Component\Console\Input\InputInterface;
@@ -90,6 +91,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     public function createListConfig(ModuleModel $module): Model
     {
+        /** @var ListConfigModel $listConfig */
         $listConfig                    = $this->modelUtil->setDefaultsFromDca(new ListConfigModel());
         $listConfig->tstamp            = $listConfig->dateAdded = time();
         $listConfig->title             = $module->name;
@@ -100,6 +102,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listConfig->useModal          = $module->news_showInModal;
         $listConfig->addInfiniteScroll = $module->news_useInfiniteScroll;
         $listConfig->itemTemplate      = $module->news_template;
+        $listConfig->sortingField      = 'date';
+        $listConfig->sortingDirection  = ListConfig::SORTING_DIRECTION_DESC;
         $listConfig->save();
         return $listConfig;
     }
@@ -146,10 +150,12 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $this->io->writeln("No list modules found.");
             return true;
         }
-        $listCount   = 0;
-        $errorCount  = 0;
-        $readerCount = 0;
-        $filterCount = 0;
+        $listCount                   = 0;
+        $errorCount                  = 0;
+        $readerCount                 = 0;
+        $readerAlreadyConvertedCount = 0;
+        $filterAlreadyConvertedCount = 0;
+        $filterCount                 = 0;
         $this->io->progressStart($listModules->count());
         foreach ($listModules as $module)
         {
@@ -159,12 +165,20 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $listCount++;
             $filters = $this->migrateListModule($module, $listConfig, $filters);
 
-            $readerConfig = null;
+            $filterConfig = null;
             if ($module->news_readerModule && $module->news_readerModule > 0)
             {
                 if ($readerModule = ModuleModel::findById($module->news_readerModule))
                 {
-                    $readerConfig                   = $this->createReaderConfig($readerModule);
+                    if (ModuleReader::TYPE !== $readerModule->type || !$readerConfig = ReaderConfigModel::findByPk($readerModule->readerConfig))
+                    {
+                        $readerConfig = $this->createReaderConfig($readerModule);
+                        $readerCount++;
+                    } else
+                    {
+                        $filterConfig = FilterConfigModel::findByIdOrAlias($readerConfig->filter);
+                        $readerAlreadyConvertedCount++;
+                    }
                     $readerConfig                   = $this->migrateReaderModule($readerModule, $readerConfig);
                     $this->processedReaderModules[] = $readerModule->id;
                 }
@@ -174,12 +188,26 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             {
                 if ($filterModule = ModuleModel::findById($module->news_filterModule))
                 {
-                    $filters                        = $this->migrateFilterModule($filterModule, $filters);
-                    $this->processedFilterModules[] = $filterModule->id;
+                    if (ModuleFilter::TYPE !== $filterModule->type)
+                    {
+                        $filters                        = $this->migrateFilterModule($filterModule, $filters);
+                        $this->processedFilterModules[] = $filterModule->id;
+                        $filterCount++;
+                    } else
+                    {
+                        $filterAlreadyConvertedCount++;
+                    }
+
+
+
+
                 }
             }
 
-            $filterConfig       = $this->attachFilter($module);
+            if (!$filterConfig)
+            {
+                $filterConfig = $this->attachFilter($module);
+            }
             $listConfig->filter = $filterConfig->id;
             $listConfig->save();
 
@@ -187,19 +215,25 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             {
                 $readerConfig->filter = $filterConfig->id;
                 $readerConfig->save();
-                $readerCount++;
             }
             if ($filterModule)
             {
                 $filterModule->filter = $filterConfig->id;
                 $filterModule->save();
-                $filterCount++;
             }
 
             $this->attachFilterElements($filterConfig, $filters);
         }
         $this->io->progressFinish();
         $this->io->writeln("Finished migration of $listCount list modules. Also migrated $readerCount reader modules and $filterCount filter modules linked with list modules.");
+        if ($readerAlreadyConvertedCount > 0)
+        {
+            $this->io->writeln("$readerAlreadyConvertedCount reader modules were already converted.");
+        }
+        if ($filterAlreadyConvertedCount > 0)
+        {
+            $this->io->writeln("$filterAlreadyConvertedCount filter modules were already converted.");
+        }
         $this->io->newLine();
         return true;
     }
