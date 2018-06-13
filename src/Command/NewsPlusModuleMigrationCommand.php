@@ -20,7 +20,6 @@ use Contao\Model\Collection;
 use Contao\ModuleModel;
 use Contao\NewsArchiveModel;
 use Contao\StringUtil;
-use HeimrichHannot\CategoriesBundle\CategoriesBundle;
 use HeimrichHannot\FilterBundle\Filter\Type\ChoiceType;
 use HeimrichHannot\FilterBundle\Filter\Type\DateRangeType;
 use HeimrichHannot\FilterBundle\Filter\Type\DateType;
@@ -72,6 +71,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      * @var TranslatorInterface
      */
     protected $translator;
+    /**
+     * @var array
+     */
+    protected $processedTemplates = [];
 
     public function __construct(ContaoFrameworkInterface $framework, ModelUtil $modelUtil, TranslatorInterface $translator)
     {
@@ -87,7 +90,6 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     public function createListConfig(ModuleModel $module): Model
     {
-        $this->io->progressAdvance();
         $listConfig                    = $this->modelUtil->setDefaultsFromDca(new ListConfigModel());
         $listConfig->tstamp            = $listConfig->dateAdded = time();
         $listConfig->title             = $module->name;
@@ -141,7 +143,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listModules = $this->findModules(['newslist_plus', 'newslist_highlight']);
         if (!$listModules)
         {
-            $this->io->note("No list modules found.");
+            $this->io->writeln("No list modules found.");
             return true;
         }
         $listCount   = 0;
@@ -151,6 +153,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $this->io->progressStart($listModules->count());
         foreach ($listModules as $module)
         {
+            $this->io->progressAdvance();
             $filters    = [];
             $listConfig = $this->createListConfig($module);
             $listCount++;
@@ -210,7 +213,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $readerModules = $this->findModules(["newsreader_plus"]);
         if (!$readerModules)
         {
-            $this->io->note("No reader modules found.");
+            $this->io->writeln("No reader modules found.");
             return true;
         }
         $modulesCount = 0;
@@ -271,6 +274,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $module->tstamp     = time();
         $module->type       = Module::MODULE_LIST;
         $module->listConfig = $listConfig->id;
+        $module->save();
         return $filters;
     }
 
@@ -375,7 +379,20 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     protected function copyNewsTemplate(ModuleModel $module)
     {
-        $templatePath     = Controller::getTemplate($module->news_template);
+        if (in_array($module->news_template, $this->processedTemplates))
+        {
+            return true;
+        }
+        $this->processedTemplates[] = $module->news_template;
+        try
+        {
+            Controller::getTemplate($module->news_template);
+        } catch (\Exception $e) {
+            $this->io->newLine(2);
+            $this->io->error('Template ' . $module->news_template . ' does not exist and therefor could not be copied.');
+
+        }
+        $templatePath     =
         $twigTemplatePath = $this->getContainer()->getParameter('kernel.project_dir') . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $module->news_template . '.html.twig';
 
         if (!file_exists($twigTemplatePath))
@@ -385,13 +402,16 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             try
             {
                 $fileSystem->copy($templatePath, $twigTemplatePath);
+                $this->io->newLine(2);
                 $this->io->writeln('Created copy of existing template to ' . $module->news_template . '.html.twig template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.');
             } catch (FileNotFoundException $e)
             {
+                $this->io->newLine(2);
                 $this->io->error('Could not copy news_template: ' . $module->news_template . ', which file does not exist.');
                 return false;
             } catch (IOException $e)
             {
+                $this->io->newLine(2);
                 $this->io->error('An error occurred while copy news_template from ' . $templatePath . ' to ' . $twigTemplatePath . '.');
                 return false;
             }

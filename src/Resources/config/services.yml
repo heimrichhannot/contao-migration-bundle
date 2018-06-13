@@ -6,10 +6,6 @@ services:
 
   ## Module Commands
 
-  huh.migration.module.abstract:
-    class: HeimrichHannot\MigrationBundle\Command\AbstractModuleMigrationCommand
-    arguments: ['@?', '@contao.framework']
-
   huh.migration.module.newsreader:
     class: HeimrichHannot\MigrationBundle\Command\NewsReaderModuleMigrationCommand
     arguments: ['@contao.framework']
