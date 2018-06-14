@@ -14,7 +14,6 @@ services:
     class: HeimrichHannot\MigrationBundle\Command\NewsPlusModuleMigrationCommand
     arguments: ['@contao.framework', '@huh.utils.model', '@translator']
 
-
   ## Database Commands
 
   huh.migration.database.newscategories:

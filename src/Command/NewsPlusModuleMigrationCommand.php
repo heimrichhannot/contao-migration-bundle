@@ -30,15 +30,16 @@ use HeimrichHannot\FilterBundle\Model\FilterConfigModel;
 use HeimrichHannot\FilterBundle\Module\ModuleFilter;
 use HeimrichHannot\ListBundle\Backend\ListConfig;
 use HeimrichHannot\ListBundle\Backend\ListConfigElement;
-use HeimrichHannot\ListBundle\Backend\Module;
 use HeimrichHannot\ListBundle\Model\ListConfigElementModel;
 use HeimrichHannot\ListBundle\Model\ListConfigModel;
+use HeimrichHannot\ListBundle\Module\ModuleList;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigModel;
 use HeimrichHannot\ReaderBundle\Module\ModuleReader;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
 use HeimrichHannot\UtilsBundle\Model\ModelUtil;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
@@ -48,6 +49,19 @@ use Symfony\Component\Translation\TranslatorInterface;
 
 class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 {
+    const NEWS_PLUS_READER = 'newsreader_plus';
+    const NEWS_PLUS_LIST = 'newslist_plus';
+    const NEWS_PLUS_HIGHLIGHT = 'newslist_highlight';
+
+    const LIST_MODULES = [
+        self::NEWS_PLUS_LIST,
+        self::NEWS_PLUS_HIGHLIGHT
+    ];
+
+    const READER_MODULES = [
+        self::NEWS_PLUS_READER
+    ];
+
     /**
      * @var ContaoFrameworkInterface
      */
@@ -76,6 +90,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      * @var array
      */
     protected $processedTemplates = [];
+    protected $dryRun = false;
+    protected $count = [];
 
     public function __construct(ContaoFrameworkInterface $framework, ModelUtil $modelUtil, TranslatorInterface $translator)
     {
@@ -98,20 +114,26 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listConfig->numberOfItems     = $module->numberOfItems;
         $listConfig->perPage           = $module->perPage;
         $listConfig->skipFirst         = $module->skipFirst;
+        $listConfig->addDetails        = "1";
         $listConfig->jumpToDetails     = $module->jumpToDetails;
         $listConfig->useModal          = $module->news_showInModal;
         $listConfig->addInfiniteScroll = $module->news_useInfiniteScroll;
         $listConfig->itemTemplate      = $module->news_template;
         $listConfig->sortingField      = 'date';
         $listConfig->sortingDirection  = ListConfig::SORTING_DIRECTION_DESC;
-        $listConfig->save();
+        if (!$this->dryRun) {
+            $listConfig->save();
+        }
         return $listConfig;
     }
 
     protected function configure()
     {
         $this->setName("huh:migration:module:newsplus")
-            ->setDescription("A migration script for newsplus modules");
+            ->setDescription("A migration script for newsplus modules")
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, "Performs a run without writing to datebase and copy templates.")
+            ->addOption('module', 'm', InputOption::VALUE_REQUIRED, "Convert a single module instead of all modules.")
+        ;
         parent::configure();
     }
 
@@ -127,12 +149,45 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     protected function executeLocked(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
-        $io->title("Migration for News_Plus module");
+        $io->title("Migration for News Plus module");
         $this->io = $io;
         $this->framework->initialize();
 
-        $this->migrateListModules();
-        $this->migrateReaderModules();
+        if ($input->hasOption('dry-run') && $input->getOption('dry-run'))
+        {
+            $this->dryRun = true;
+            $io->note("Dry run enabled, no data will be changed.");
+            $io->newLine();
+        }
+        if ($input->hasOption('module') && $input->getOption('module'))
+        {
+            if (!$module = ModuleModel::findById($input->getOption('module')))
+            {
+                $io->error("No module with given id found.");
+                return 1;
+            }
+            switch ($module->type) {
+                case static::NEWS_PLUS_LIST:
+                case static::NEWS_PLUS_HIGHLIGHT:
+                    $io->writeln("Start migration ".$module->type.' module "'.$module->name.'" (ID: '.$module->id.')');
+                    $this->migrateList($module);
+                    break;
+                case static::NEWS_PLUS_READER:
+                    $io->writeln("Start migration ".$module->type.' module "'.$module->name.'" (ID: '.$module->id.')');
+                    $this->migrateReader($module);
+                    break;
+                default:
+                    $io->error("Modules of type ".$module->type.' are not supported.');
+                    return 1;
+            }
+        }
+        else
+        {
+            $this->migrateListModules();
+            $this->migrateReaderModules();
+        }
+
+
 
         $io->success("Migration news plus to filter/list/reader finished!");
         return 0;
@@ -144,86 +199,30 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     public function migrateListModules()
     {
         $this->io->section("List module migration");
-        $listModules = $this->findModules(['newslist_plus', 'newslist_highlight']);
+        $listModules = $this->findModules(static::LIST_MODULES);
         if (!$listModules)
         {
             $this->io->writeln("No list modules found.");
             return true;
         }
-        $listCount                   = 0;
-        $errorCount                  = 0;
-        $readerCount                 = 0;
-        $readerAlreadyConvertedCount = 0;
-        $filterAlreadyConvertedCount = 0;
-        $filterCount                 = 0;
+        $this->count = [
+            'list' => 0,
+            'reader' => 0,
+            'filter' => 0,
+            'readerConverted' => 0,
+            'filterConverted' => 0,
+        ];
         $this->io->progressStart($listModules->count());
         foreach ($listModules as $module)
         {
             $this->io->progressAdvance();
-            $filters    = [];
-            $listConfig = $this->createListConfig($module);
-            $listCount++;
-            $filters = $this->migrateListModule($module, $listConfig, $filters);
-
-            $filterConfig = null;
-            if ($module->news_readerModule && $module->news_readerModule > 0)
-            {
-                if ($readerModule = ModuleModel::findById($module->news_readerModule))
-                {
-                    if (ModuleReader::TYPE !== $readerModule->type || !$readerConfig = ReaderConfigModel::findByPk($readerModule->readerConfig))
-                    {
-                        $readerConfig = $this->createReaderConfig($readerModule);
-                        $readerCount++;
-                    } else
-                    {
-                        $filterConfig = FilterConfigModel::findByIdOrAlias($readerConfig->filter);
-                        $readerAlreadyConvertedCount++;
-                    }
-                    $readerConfig                   = $this->migrateReaderModule($readerModule, $readerConfig);
-                    $this->processedReaderModules[] = $readerModule->id;
-                }
-            }
-
-            if ($module->news_filterModule && $module->news_filterModule > 0)
-            {
-                if ($filterModule = ModuleModel::findById($module->news_filterModule))
-                {
-                    if (ModuleFilter::TYPE !== $filterModule->type)
-                    {
-                        $filters                        = $this->migrateFilterModule($filterModule, $filters);
-                        $this->processedFilterModules[] = $filterModule->id;
-                        $filterCount++;
-                    } else
-                    {
-                        $filterAlreadyConvertedCount++;
-                    }
-
-
-
-
-                }
-            }
-
-            if (!$filterConfig)
-            {
-                $filterConfig = $this->attachFilter($module);
-            }
-            $listConfig->filter = $filterConfig->id;
-            $listConfig->save();
-
-            if ($readerConfig)
-            {
-                $readerConfig->filter = $filterConfig->id;
-                $readerConfig->save();
-            }
-            if ($filterModule)
-            {
-                $filterModule->filter = $filterConfig->id;
-                $filterModule->save();
-            }
-
-            $this->attachFilterElements($filterConfig, $filters);
+            $this->migrateList($module);
         }
+        $listCount                   = $this->count['list'];
+        $readerCount                 = $this->count['reader'];
+        $filterCount                 = $this->count['filter'];
+        $readerAlreadyConvertedCount = $this->count['readerConverted'];
+        $filterAlreadyConvertedCount = $this->count['filterConverted'];
         $this->io->progressFinish();
         $this->io->writeln("Finished migration of $listCount list modules. Also migrated $readerCount reader modules and $filterCount filter modules linked with list modules.");
         if ($readerAlreadyConvertedCount > 0)
@@ -238,44 +237,121 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         return true;
     }
 
+    public function migrateList(ModuleModel $module)
+    {
+        $filters    = [];
+        $listConfig = $this->createListConfig($module);
+        $this->count['list']++;
+        $filters = $this->migrateListModule($module, $listConfig, $filters);
+
+        $filterConfig = null;
+        if ($module->news_readerModule && $module->news_readerModule > 0)
+        {
+            if ($readerModule = ModuleModel::findById($module->news_readerModule))
+            {
+                if (ModuleReader::TYPE !== $readerModule->type || !$readerConfig = ReaderConfigModel::findByPk($readerModule->readerConfig || $this->dryRun))
+                {
+                    $readerConfig = $this->createReaderConfig($readerModule);
+                    $this->count['reader']++;
+                } else
+                {
+                    $filterConfig = FilterConfigModel::findByIdOrAlias($readerConfig->filter);
+                    $this->count['readerConverted']++;
+                }
+                $readerConfig                   = $this->migrateReaderModule($readerModule, $readerConfig);
+                $this->processedReaderModules[] = $readerModule->id;
+            }
+        }
+
+        if ($module->news_filterModule && $module->news_filterModule > 0)
+        {
+            if ($filterModule = ModuleModel::findById($module->news_filterModule))
+            {
+                if (ModuleFilter::TYPE !== $filterModule->type)
+                {
+                    $filters                        = $this->migrateFilterModule($filterModule, $filters);
+                    $this->processedFilterModules[] = $filterModule->id;
+                    $this->count['filter']++;
+                } else
+                {
+                    $this->count['filterConverted']++;
+                }
+            }
+        }
+
+        if (!$filterConfig)
+        {
+            $filterConfig = $this->attachFilter($module);
+        }
+        $listConfig->filter = $filterConfig->id;
+        if (!$this->dryRun) {
+            $listConfig->save();
+        }
+        if ($readerConfig)
+        {
+            $readerConfig->filter = $filterConfig->id;
+            if (!$this->dryRun) {
+                $readerConfig->save();
+            }
+
+        }
+        if ($filterModule)
+        {
+            $filterModule->filter = $filterConfig->id;
+            if (!$this->dryRun) {
+                $filterModule->save();
+            }
+
+        }
+        $this->attachFilterElements($filterConfig, $filters);
+    }
+
     /**
      * @return bool
      */
     public function migrateReaderModules()
     {
         $this->io->section("Reader modules migration");
-        $readerModules = $this->findModules(["newsreader_plus"]);
+        $readerModules = $this->findModules(static::READER_MODULES);
         if (!$readerModules)
         {
             $this->io->writeln("No reader modules found.");
             return true;
         }
-        $modulesCount = 0;
-        $skippedCount = 0;
+        $this->count['skipped'] = 0;
+        $this->count['reader'] = 0;
         $this->io->progressStart($readerModules->count());
         foreach ($readerModules as $module)
         {
             $this->io->progressAdvance();
-            if (in_array($module->id, $this->processedReaderModules))
-            {
-                $skippedCount++;
-                continue;
-            }
-            $readerConfig = $this->createReaderConfig($module);
-            $this->migrateReaderModule($module, $readerConfig);
-            $modulesCount++;
-
-            $filterConfig             = $this->attachFilter($module);
-            $filters                  = [];
-            $filters["news_archives"] = StringUtil::deserialize($module->news_archives, true);
-            $this->attachFilterElements($filterConfig, $filters);
-
-
+            $this->migrateReader($module);
         }
+        $modulesCount = $this->count['reader'];
+        $skippedCount = $this->count['skipped'];
         $this->io->progressFinish();
         $this->io->writeln("Finished migration of $modulesCount reader modules. $skippedCount modules were already migrated.");
         $this->io->newLine();
         return true;
+    }
+
+    /**
+     * @param ModuleModel $module
+     */
+    public function migrateReader(ModuleModel $module)
+    {
+        if (in_array($module->id, $this->processedReaderModules))
+        {
+            $this->count['skipped']++;
+            return;
+        }
+        $readerConfig = $this->createReaderConfig($module);
+        $this->migrateReaderModule($module, $readerConfig);
+        $this->count['reader']++;
+
+        $filterConfig             = $this->attachFilter($module);
+        $filters                  = [];
+        $filters["news_archives"] = StringUtil::deserialize($module->news_archives, true);
+        $this->attachFilterElements($filterConfig, $filters);
     }
 
     /**
@@ -303,12 +379,22 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filters["news_archives"] = StringUtil::deserialize($module->news_archives, true);
         $this->attachListImageElement($module, $listConfig);
 
-        $this->copyNewsTemplate($module);
+        if (!$this->copyNewsTemplate($module))
+        {
+            $this->io->note("Due error while importig the template, the item template will be reset to default template.");
+            $listConfig->itemTemplate = "default";
+            if (!$this->dryRun) {
+                $listConfig->save();
+            }
+
+        }
 
         $module->tstamp     = time();
-        $module->type       = Module::MODULE_LIST;
+        $module->type       = ModuleList::TYPE;
         $module->listConfig = $listConfig->id;
-        $module->save();
+        if (!$this->dryRun) {
+            $module->save();
+        }
         return $filters;
     }
 
@@ -329,7 +415,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $module->tstamp       = time();
         $module->readerConfig = $readerConfig->id;
         $module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
-        $module->save();
+        if (!$this->dryRun) {
+            $module->save();
+        }
+
 
         $this->copyNewsTemplate($module);
 
@@ -372,8 +461,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
         $module->tstamp = time();
         $module->type   = ModuleFilter::TYPE;
-        $module->save();
-
+        if (!$this->dryRun) {
+            $module->save();
+        }
         return $filters;
     }
 
@@ -404,7 +494,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             ['service' => 'huh.head.tag.og_type', 'pattern' => 'article'],
             ['service' => 'huh.head.tag.og_description', 'pattern' => '%teaser%'],
         ];
-        return $readerConfig->save();
+        if (!$this->dryRun) {
+            $readerConfig->save();
+        }
+        return $readerConfig;
     }
 
     /**
@@ -418,19 +511,42 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             return true;
         }
         $this->processedTemplates[] = $module->news_template;
+
+        if (ModuleList::TYPE == $module->type || in_array($module->type, static::LIST_MODULES))
+        {
+            $listTemplates = $this->getContainer()->getParameter('huh.list')['list']['templates']['item'];
+            if (array_search($module->news_template, array_column($listTemplates, 'name')))
+            {
+                return true;
+            }
+        }
+        if (ModuleReader::TYPE == $module->type || in_array($module->type, static::READER_MODULES))
+        {
+            $readerTemplates = $this->getContainer()->getParameter('huh.reader')['reader']['templates']['item'];
+            if (array_search($module->news_template, array_column($readerTemplates, 'name')))
+            {
+                return true;
+            }
+        }
+
         try
         {
-            Controller::getTemplate($module->news_template);
+            $templatePath = Controller::getTemplate($module->news_template);
         } catch (\Exception $e) {
             $this->io->newLine(2);
-            $this->io->error('Template ' . $module->news_template . ' does not exist and therefor could not be copied.');
+            $this->io->error('Template ' . $module->news_template . ' does not exist and therefore could not be copied.');
+            return false;
 
         }
-        $templatePath     =
         $twigTemplatePath = $this->getContainer()->getParameter('kernel.project_dir') . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $module->news_template . '.html.twig';
 
         if (!file_exists($twigTemplatePath))
         {
+            if ($this->dryRun) {
+                $this->io->newLine(2);
+                $this->io->writeln('Created no copy of existing template to ' . $module->news_template . '.html.twig template');
+                return true;
+            }
             $fileSystem = new Filesystem();
 
             try
@@ -438,6 +554,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
                 $fileSystem->copy($templatePath, $twigTemplatePath);
                 $this->io->newLine(2);
                 $this->io->writeln('Created copy of existing template to ' . $module->news_template . '.html.twig template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.');
+                return true;
             } catch (FileNotFoundException $e)
             {
                 $this->io->newLine(2);
@@ -469,7 +586,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listConfigElement->imageField         = 'singleSRC';
         $listConfigElement->imgSize            = $module->imgSize;
         $listConfigElement->pid                = $listConfig->id;
-        $listConfigElement->save();
+        if (!$this->dryRun) {
+            $listConfigElement->save();
+        }
         return true;
     }
 
@@ -488,7 +607,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $readerConfigElement->imageSelectorField = 'addImage';
         $readerConfigElement->imageField         = 'singleSRC';
         $readerConfigElement->imgSize            = $module->imgSize;
-        $readerConfigElement->save();
+        if (!$this->dryRun) {
+            $readerConfigElement->save();
+        }
         return true;
     }
 
@@ -513,7 +634,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $readerConfigElement->nextTitle          = 'huh.reader.element.title.next.default';
         $readerConfigElement->previousTitle      = 'huh.reader.element.title.previous.default';
         $readerConfigElement->infiniteNavigation = (bool)$module->news_navigation_infinite;
-        $readerConfigElement->save();
+        if (!$this->dryRun) {
+            $readerConfigElement->save();
+        }
         return true;
     }
 
@@ -570,7 +693,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         {
             $readerConfigElement->syndicationMail = true;
         }
-        $readerConfigElement->save();
+        if (!$this->dryRun) {
+            $readerConfigElement->save();
+        }
         return true;
     }
 
@@ -588,7 +713,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterConfig->method        = 'GET';
         $filterConfig->template      = 'form_div_layout';
         $filterConfig->published     = 1;
-        $filterConfig->save();
+        if (!$this->dryRun) {
+            $filterConfig->save();
+        }
         return $filterConfig;
     }
 
@@ -653,8 +780,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->initialValueType  = 'array';
         $filterElement->initialValueArray = serialize($initialValueArray);
         $filterElement->published         = 1;
-        $filterElement->save();
-
+        if (!$this->dryRun) {
+            $filterElement->save();
+        }
         if ($filterElement->id > 0)
         {
             return $sorting * 2;
@@ -676,7 +804,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->addStartAndStop = 1;
         $filterElement->startField      = 'start';
         $filterElement->stopField       = 'stop';
-        $filterElement->save();
+        if (!$this->dryRun) {
+            $filterElement->save();
+        }
 
         if ($filterElement->id > 0)
         {
@@ -706,7 +836,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->addPlaceholder   = '1';
         $filterElement->placeholder      = $this->translator->trans('huh.filter.placeholder.from');
         $filterElement->published        = 1;
-        $startElement                    = $filterElement->save();
+        if (!$this->dryRun) {
+            $startElement                    = $filterElement->save();
+        }
 
         $filterElement                   = $this->modelUtil->setDefaultsFromDca(new FilterConfigElementModel());
         $filterElement->title            = 'End date';
@@ -722,7 +854,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->addPlaceholder   = '1';
         $filterElement->placeholder      = $this->translator->trans('huh.filter.placeholder.to');
         $filterElement->published        = 1;
-        $stopElement                     = $filterElement->save();
+        if (!$this->dryRun) {
+            $stopElement                     = $filterElement->save();
+        }
 
         $filterElement               = $this->modelUtil->setDefaultsFromDca(new FilterConfigElementModel());
         $filterElement->title        = 'Date range';
@@ -732,11 +866,12 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->dateAdded    = time();
         $filterElement->type         = DateRangeType::TYPE;
         $filterElement->name         = 'date_range';
-        $filterElement->startElement = $startElement->id;
-        $filterElement->stopElement  = $stopElement->id;
         $filterElement->published    = 1;
-        $filterElement->save();
-
+        if (!$this->dryRun) {
+            $filterElement->startElement = $startElement->id;
+            $filterElement->stopElement  = $stopElement->id;
+            $filterElement->save();
+        }
         return $sorting * 8;
     }
 
@@ -755,7 +890,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->dateAdded = time();
         $filterElement->type      = SubmitType::TYPE;
         $filterElement->published = 1;
-        $filterElement->save();
+        if (!$this->dryRun) {
+            $filterElement->save();
+        }
         return $sorting * 2;
     }
 
@@ -776,7 +913,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->fields    = serialize(['headline', 'teaser']);
         $filterElement->name      = 'search';
         $filterElement->published = 1;
-        $filterElement->save();
+        if (!$this->dryRun) {
+            $filterElement->save();
+        }
         return $sorting * 2;
     }
 
@@ -809,7 +948,9 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filterElement->name             = 'categories';
         $filterElement->published        = 1;
         $filterElement->parentCategories = serialize($categories);
-        $filterElement->save();
+        if (!$this->dryRun) {
+            $filterElement->save();
+        }
         return $sorting * 2;
     }
 }

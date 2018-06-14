@@ -7,7 +7,9 @@
     "php": "^7.1",
     "symfony/framework-bundle": "^3.4",
     "contao/core-bundle": "^4.4",
-    "heimrichhannot/contao-reader-bundle": "^1.0.0-beta45"
+    "heimrichhannot/contao-reader-bundle": "^1.0.0-beta45",
+    "heimrichhannot/contao-list-bundle": "^1.0.0-beta46",
+    "heimrichhannot/contao-filter-bundle": "^1.0.0-beta31"
   },
   "require-dev": {
     "contao/test-case": "^1.1",
