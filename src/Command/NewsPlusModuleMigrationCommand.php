@@ -33,6 +33,7 @@ use HeimrichHannot\ListBundle\Backend\ListConfigElement;
 use HeimrichHannot\ListBundle\Model\ListConfigElementModel;
 use HeimrichHannot\ListBundle\Model\ListConfigModel;
 use HeimrichHannot\ListBundle\Module\ModuleList;
+use HeimrichHannot\MigrationBundle\HeimrichHannotMigrationBundle;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigModel;
 use HeimrichHannot\ReaderBundle\Module\ModuleReader;
@@ -53,6 +54,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     const NEWS_PLUS_LIST = 'newslist_plus';
     const NEWS_PLUS_HIGHLIGHT = 'newslist_highlight';
 
+
+
     const LIST_MODULES = [
         self::NEWS_PLUS_LIST,
         self::NEWS_PLUS_HIGHLIGHT
@@ -60,6 +63,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
     const READER_MODULES = [
         self::NEWS_PLUS_READER
+    ];
+
+    const NEWSPLUS_TEMPLATES = [
+        'news_short_plus'
     ];
 
     /**
@@ -379,7 +386,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $filters["news_archives"] = StringUtil::deserialize($module->news_archives, true);
         $this->attachListImageElement($module, $listConfig);
 
-        if (!$this->copyNewsTemplate($module))
+        if (!$this->copyTemplate($module))
         {
             $this->io->note("Due error while importig the template, the item template will be reset to default template.");
             $listConfig->itemTemplate = "default";
@@ -420,7 +427,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         }
 
 
-        $this->copyNewsTemplate($module);
+        $this->copyTemplate($module);
 
         $this->attachReaderImageElement($module, $readerConfig);
         $this->addNavigationElement($module, $readerConfig);
@@ -498,76 +505,6 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $readerConfig->save();
         }
         return $readerConfig;
-    }
-
-    /**
-     * @param ModuleModel $module
-     * @return bool
-     */
-    protected function copyNewsTemplate(ModuleModel $module)
-    {
-        if (in_array($module->news_template, $this->processedTemplates))
-        {
-            return true;
-        }
-        $this->processedTemplates[] = $module->news_template;
-
-        if (ModuleList::TYPE == $module->type || in_array($module->type, static::LIST_MODULES))
-        {
-            $listTemplates = $this->getContainer()->getParameter('huh.list')['list']['templates']['item'];
-            if (array_search($module->news_template, array_column($listTemplates, 'name')))
-            {
-                return true;
-            }
-        }
-        if (ModuleReader::TYPE == $module->type || in_array($module->type, static::READER_MODULES))
-        {
-            $readerTemplates = $this->getContainer()->getParameter('huh.reader')['reader']['templates']['item'];
-            if (array_search($module->news_template, array_column($readerTemplates, 'name')))
-            {
-                return true;
-            }
-        }
-
-        try
-        {
-            $templatePath = Controller::getTemplate($module->news_template);
-        } catch (\Exception $e) {
-            $this->io->newLine(2);
-            $this->io->error('Template ' . $module->news_template . ' does not exist and therefore could not be copied.');
-            return false;
-
-        }
-        $twigTemplatePath = $this->getContainer()->getParameter('kernel.project_dir') . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $module->news_template . '.html.twig';
-
-        if (!file_exists($twigTemplatePath))
-        {
-            if ($this->dryRun) {
-                $this->io->newLine(2);
-                $this->io->writeln('Created no copy of existing template to ' . $module->news_template . '.html.twig template');
-                return true;
-            }
-            $fileSystem = new Filesystem();
-
-            try
-            {
-                $fileSystem->copy($templatePath, $twigTemplatePath);
-                $this->io->newLine(2);
-                $this->io->writeln('Created copy of existing template to ' . $module->news_template . '.html.twig template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.');
-                return true;
-            } catch (FileNotFoundException $e)
-            {
-                $this->io->newLine(2);
-                $this->io->error('Could not copy news_template: ' . $module->news_template . ', which file does not exist.');
-                return false;
-            } catch (IOException $e)
-            {
-                $this->io->newLine(2);
-                $this->io->error('An error occurred while copy news_template from ' . $templatePath . ' to ' . $twigTemplatePath . '.');
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
@@ -952,5 +889,105 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $filterElement->save();
         }
         return $sorting * 2;
+    }
+
+    /**
+     * @param ModuleModel $module
+     * @return bool
+     */
+    protected function copyTemplate(ModuleModel $module)
+    {
+        if (in_array($module->news_template, $this->processedTemplates))
+        {
+            return true;
+        }
+        $this->processedTemplates[] = $module->news_template;
+
+        if (ModuleList::TYPE == $module->type || in_array($module->type, static::LIST_MODULES))
+        {
+            $listTemplates = $this->getContainer()->getParameter('huh.list')['list']['templates']['item'];
+            if (array_search($module->news_template, array_column($listTemplates, 'name')))
+            {
+                return true;
+            }
+        }
+        if (ModuleReader::TYPE == $module->type || in_array($module->type, static::READER_MODULES))
+        {
+            $readerTemplates = $this->getContainer()->getParameter('huh.reader')['reader']['templates']['item'];
+            if (array_search($module->news_template, array_column($readerTemplates, 'name')))
+            {
+                return true;
+            }
+        }
+        $twigTemplatePath = $this->getContainer()->getParameter('kernel.project_dir') . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $module->news_template . '.html.twig';
+        if (file_exists($twigTemplatePath))
+        {
+            return true;
+        }
+
+        try
+        {
+            $templatePath = Controller::getTemplate($module->news_template);
+        } catch (\Exception $e)
+        {
+            if (in_array($module->news_template, static::NEWSPLUS_TEMPLATES))
+            {
+                if ($path = $this->getContainer()->get('huh.utils.container')->getBundleResourcePath(HeimrichHannotMigrationBundle::class, 'Resources/views/newsplus/'.$module->news_template.'.html.twig', true))
+                {
+                    if (!$this->dryRun)
+                    {
+                        $success = $this->copyTemplateFile($module, $path, $twigTemplatePath);
+                    }
+                    if ($success || $this->dryRun)
+                    {
+                        $this->io->writeln("Placed twig version of default News Plus template $module->news_template in template folder.");
+                        $this->io->newLine(2);
+                        return true;
+                    }
+                }
+            }
+            $this->io->newLine(2);
+            $this->io->error('Template ' . $module->news_template . ' does not exist and therefore could not be copied.');
+            return false;
+        }
+
+
+        if ($this->dryRun) {
+            $this->io->newLine(2);
+            $this->io->writeln('Created no copy of existing template to ' . $module->news_template . '.html.twig template');
+            return true;
+        }
+
+
+        return $this->copyTemplateFile($module, $templatePath, $twigTemplatePath);
+    }
+
+    /**
+     * @param ModuleModel $module
+     * @param $fileSystem
+     * @param $templatePath
+     * @param $twigTemplatePath
+     * @return bool
+     */
+    protected function copyTemplateFile(ModuleModel $module, $templatePath, $twigTemplatePath): bool
+    {
+        $fileSystem = new Filesystem();
+        try
+        {
+            $fileSystem->copy($templatePath, $twigTemplatePath);
+            $this->io->newLine(2);
+            $this->io->writeln('Created copy of existing template to ' . $module->news_template . '.html.twig template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.');
+            return true;
+        } catch (FileNotFoundException $e)
+        {
+            $this->io->newLine(2);
+            $this->io->error('Could not copy news_template: ' . $module->news_template . ', which file does not exist.');
+            return false;
+        } catch (IOException $e)
+        {
+            $this->io->newLine(2);
+            $this->io->error('An error occurred while copy news_template from ' . $templatePath . ' to ' . $twigTemplatePath . '.');
+        }
+        return false;
     }
 }

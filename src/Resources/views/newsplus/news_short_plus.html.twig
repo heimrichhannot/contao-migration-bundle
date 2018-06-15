@@ -1,0 +1,26 @@
+<div class="news box layout_short arc_{{ raw.pid }} block{{ raw.cssClass }}">
+    {% if addDetails|default() and (detailsUrl|default() or modalUrl|default()) %}
+        <a class="details inside more-section"
+        {% if useModal|default() %}
+             href="{{ modalUrl }}" data-toggle="modal"
+        {% else %}
+            href="{{ detailsUrl }}"
+        {% endif %}
+        title="{{ headline }}">
+                <h4 class="<?php echo $this->archive->class; ?>">
+                    {{ pid }}
+                </h4>
+
+                <p class="info">
+                    <time datetime="{{ raw.date }}">{{ date }} {{ time }}</time> {{ author }}
+                </p>
+
+                <h3>{{ headline|truncate(68, true) }}</h3>
+
+                <div class="teaser">
+                    {{ teaser|truncate(180, true)|raw }}
+                </div>
+
+            </a>
+    {% endif %}
+</div>
