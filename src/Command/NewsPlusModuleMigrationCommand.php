@@ -50,19 +50,28 @@ use Symfony\Component\Translation\TranslatorInterface;
 
 class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 {
-    const NEWS_PLUS_READER = 'newsreader_plus';
-    const NEWS_PLUS_LIST = 'newslist_plus';
-    const NEWS_PLUS_HIGHLIGHT = 'newslist_highlight';
-
-
+    const MOD_READER     = 'newsreader_plus';
+    const MOD_LIST       = 'newslist_plus';
+    const MOD_HIGHLIGHT  = 'newslist_highlight';
+    const MOD_ARCHIVE    = 'newsarchive_plus';
+    const MOD_NEWSMENU   = 'newsmenu_plus';
+    const MOD_NEWSFILTER = 'newsfilter';
+    const MOD_MAP        = 'newslist_map';
 
     const LIST_MODULES = [
-        self::NEWS_PLUS_LIST,
-        self::NEWS_PLUS_HIGHLIGHT
+        self::MOD_LIST,
+        self::MOD_HIGHLIGHT,
+        self::MOD_ARCHIVE,
     ];
 
     const READER_MODULES = [
-        self::NEWS_PLUS_READER
+        self::MOD_READER,
+    ];
+
+    const NON_CONVERTABLE_MODULES = [
+        self::MOD_NEWSMENU,
+        self::MOD_NEWSFILTER,
+        self::MOD_MAP,
     ];
 
     const NEWSPLUS_TEMPLATES = [
@@ -121,8 +130,11 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listConfig->numberOfItems     = $module->numberOfItems;
         $listConfig->perPage           = $module->perPage;
         $listConfig->skipFirst         = $module->skipFirst;
-        $listConfig->addDetails        = "1";
-        $listConfig->jumpToDetails     = $module->jumpToDetails;
+        if ($module->news_jumpToCurrent)
+        {
+            $listConfig->addDetails    = "1";
+            $listConfig->jumpToDetails = $module->jumpToDetails;
+        }
         $listConfig->useModal          = $module->news_showInModal;
         $listConfig->addInfiniteScroll = $module->news_useInfiniteScroll;
         $listConfig->itemTemplate      = $module->news_template;
@@ -174,12 +186,12 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
                 return 1;
             }
             switch ($module->type) {
-                case static::NEWS_PLUS_LIST:
-                case static::NEWS_PLUS_HIGHLIGHT:
+                case static::MOD_LIST:
+                case static::MOD_HIGHLIGHT:
                     $io->writeln("Start migration ".$module->type.' module "'.$module->name.'" (ID: '.$module->id.')');
                     $this->migrateList($module);
                     break;
-                case static::NEWS_PLUS_READER:
+                case static::MOD_READER:
                     $io->writeln("Start migration ".$module->type.' module "'.$module->name.'" (ID: '.$module->id.')');
                     $this->migrateReader($module);
                     break;
@@ -192,6 +204,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         {
             $this->migrateListModules();
             $this->migrateReaderModules();
+            $this->nonConvertableModules();
         }
 
 
@@ -377,6 +390,37 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
     /**
      * @param ModuleModel $module
+     *
+     * @param ReaderConfigModel $readerConfig
+     * @return ReaderConfigModel
+     */
+    public function migrateReaderModule(ModuleModel $module, ReaderConfigModel $readerConfig)
+    {
+
+        if (!$readerConfig || $readerConfig->id < 1)
+        {
+            return null;
+        }
+
+        $module->tstamp       = time();
+        $module->readerConfig = $readerConfig->id;
+        $module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
+        if (!$this->dryRun)
+        {
+            $module->save();
+        }
+
+
+        $this->copyTemplate($module);
+
+        $this->attachReaderImageElement($module, $readerConfig);
+        $this->addNavigationElement($module, $readerConfig);
+        $this->addSyndicationElement($module, $readerConfig);
+        return $readerConfig;
+    }
+
+    /**
+     * @param ModuleModel $module
      * @param ListConfigModel|Model $listConfig
      * @param array $filters
      * @return array
@@ -403,36 +447,6 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $module->save();
         }
         return $filters;
-    }
-
-    /**
-     * @param ModuleModel $module
-     *
-     * @param ReaderConfigModel $readerConfig
-     * @return ReaderConfigModel
-     */
-    public function migrateReaderModule(ModuleModel $module, ReaderConfigModel $readerConfig)
-    {
-
-        if (!$readerConfig || $readerConfig->id < 1)
-        {
-            return null;
-        }
-
-        $module->tstamp       = time();
-        $module->readerConfig = $readerConfig->id;
-        $module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
-        if (!$this->dryRun) {
-            $module->save();
-        }
-
-
-        $this->copyTemplate($module);
-
-        $this->attachReaderImageElement($module, $readerConfig);
-        $this->addNavigationElement($module, $readerConfig);
-        $this->addSyndicationElement($module, $readerConfig);
-        return $readerConfig;
     }
 
     /**
@@ -523,6 +537,16 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listConfigElement->imageField         = 'singleSRC';
         $listConfigElement->imgSize            = $module->imgSize;
         $listConfigElement->pid                = $listConfig->id;
+        $newsarchives = StringUtil::deserialize($module->news_archives, true);
+        foreach ($newsarchives as $archiveId)
+        {
+            $archive = NewsArchiveModel::findById($archiveId);
+            if ($archive && $archive->addDummyImage && !empty($archive->dummyImageSingleSRC))
+            {
+                $listConfigElement->placeholderImageMode = ListConfigElement::PLACEHOLDER_IMAGE_MODE_SIMPLE;
+                $listConfigElement->placeholderImage     = $archive->dummyImageSingleSRC;
+            }
+        }
         if (!$this->dryRun) {
             $listConfigElement->save();
         }
@@ -989,5 +1013,31 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $this->io->error('An error occurred while copy news_template from ' . $templatePath . ' to ' . $twigTemplatePath . '.');
         }
         return false;
+    }
+
+    protected function nonConvertableModules()
+    {
+        $listModules = $this->findModules(static::NON_CONVERTABLE_MODULES);
+        if (!$listModules)
+        {
+            return true;
+        }
+        $this->io->section("Following modules must be converted manuel:");
+        $moduleList = [];
+        foreach ($listModules as $module)
+        {
+            $current = [
+                "name" => $module->name,
+                "id"   => $module->id,
+                "type" => $module->type,
+                "help" => ""
+            ];
+            if (static::MOD_NEWSMENU == $module->type)
+            {
+                $current["help"] = "Change to filter type and add filter of belonging list module.";
+            }
+            $moduleList[] = $current;
+        }
+        $this->io->table(["Name", "ID", "Type", "Help"], $moduleList);
     }
 }
