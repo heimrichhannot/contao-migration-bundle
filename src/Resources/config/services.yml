@@ -12,7 +12,7 @@ services:
 
   huh.migration.module.newsplus:
     class: HeimrichHannot\MigrationBundle\Command\NewsPlusModuleMigrationCommand
-    arguments: ['@contao.framework', '@huh.utils.model', '@translator']
+    arguments: ['@contao.framework', '@huh.utils.model', '@translator', '@huh.utils.container']
 
   ## Database Commands
 

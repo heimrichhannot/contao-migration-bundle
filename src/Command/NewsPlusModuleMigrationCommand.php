@@ -34,9 +34,11 @@ use HeimrichHannot\ListBundle\Model\ListConfigElementModel;
 use HeimrichHannot\ListBundle\Model\ListConfigModel;
 use HeimrichHannot\ListBundle\Module\ModuleList;
 use HeimrichHannot\MigrationBundle\HeimrichHannotMigrationBundle;
+use HeimrichHannot\NewsBundle\HeimrichHannotContaoNewsBundle;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigModel;
 use HeimrichHannot\ReaderBundle\Module\ModuleReader;
+use HeimrichHannot\UtilsBundle\Container\ContainerUtil;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
 use HeimrichHannot\UtilsBundle\Model\ModelUtil;
 use Symfony\Component\Console\Input\InputInterface;
@@ -87,6 +89,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     protected $modelUtil;
     /**
+     * @var ContainerUtil
+     */
+    private $containerUtil;
+    /**
      * @var array
      */
     protected $processedReaderModules = [];
@@ -108,13 +114,15 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     protected $processedTemplates = [];
     protected $dryRun = false;
     protected $count = [];
+    protected $convertedModules = [];
 
-    public function __construct(ContaoFrameworkInterface $framework, ModelUtil $modelUtil, TranslatorInterface $translator)
+    public function __construct(ContaoFrameworkInterface $framework, ModelUtil $modelUtil, TranslatorInterface $translator, ContainerUtil $containerUtil)
     {
         parent::__construct();
         $this->framework  = $framework;
         $this->modelUtil  = $modelUtil;
         $this->translator = $translator;
+        $this->containerUtil = $containerUtil;
     }
 
     /**
@@ -130,10 +138,12 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listConfig->numberOfItems     = $module->numberOfItems;
         $listConfig->perPage           = $module->perPage;
         $listConfig->skipFirst         = $module->skipFirst;
+        $listConfig->listGrid          = $module->listGrid;
+        $listConfig->addDetails    = "1";
+        $listConfig->item = 'news_default';
         if ($module->news_jumpToCurrent)
         {
-            $listConfig->addDetails    = "1";
-            $listConfig->jumpToDetails = $module->jumpToDetails;
+            $listConfig->jumpToDetails = $module->news_jumpToCurrent;
         }
         $listConfig->useModal          = $module->news_showInModal;
         $listConfig->addInfiniteScroll = $module->news_useInfiniteScroll;
@@ -171,6 +181,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $io->title("Migration for News Plus module");
         $this->io = $io;
         $this->framework->initialize();
+        $this->convertedModules = [];
 
         if ($input->hasOption('dry-run') && $input->getOption('dry-run'))
         {
@@ -204,7 +215,25 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         {
             $this->migrateListModules();
             $this->migrateReaderModules();
+
+            if (!empty($this->convertedModules["list"]))
+            {
+                $io->writeln("Converted list modules:");
+                $io->table(["Name", "ID", "Old Type", "New Type"], $this->convertedModules["list"]);
+            }
+            if (!empty($this->convertedModules["reader"]))
+            {
+                $io->writeln("Converted reader modules:");
+                $io->table(["Name", "ID", "Old Type", "New Type"], $this->convertedModules["reader"]);
+            }
+            if (!empty($this->convertedModules["filter"]))
+            {
+                $io->writeln("Converted filter modules:");
+                $io->table(["Name", "ID", "Old Type", "New Type"], $this->convertedModules["filter"]);
+            }
             $this->nonConvertableModules();
+
+
         }
 
 
@@ -259,6 +288,11 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
     public function migrateList(ModuleModel $module)
     {
+        $current = [
+            "name" => $module->name,
+            "id"   => $module->id,
+            "type" => $module->type,
+        ];
         $filters    = [];
         $listConfig = $this->createListConfig($module);
         $this->count['list']++;
@@ -272,16 +306,18 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
                 if (ModuleReader::TYPE !== $readerModule->type || !$readerConfig = ReaderConfigModel::findByPk($readerModule->readerConfig || $this->dryRun))
                 {
                     $readerConfig = $this->createReaderConfig($readerModule);
+                    $readerConfig = $this->migrateReaderModule($readerModule, $readerConfig);
                     $this->count['reader']++;
                 } else
                 {
                     $filterConfig = FilterConfigModel::findByIdOrAlias($readerConfig->filter);
                     $this->count['readerConverted']++;
                 }
-                $readerConfig                   = $this->migrateReaderModule($readerModule, $readerConfig);
+
                 $this->processedReaderModules[] = $readerModule->id;
             }
         }
+
 
         if ($module->news_filterModule && $module->news_filterModule > 0)
         {
@@ -323,6 +359,12 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             }
 
         }
+        if (!'news_default' == $listConfig->item)
+        {
+            $this->addJumpTo($module, $listConfig, $readerModule, $filterModule);
+        }
+        $current["type_new"] = $module->type;
+        $this->convertedModules['list'][] = $current;
         $this->attachFilterElements($filterConfig, $filters);
     }
 
@@ -396,8 +438,12 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     public function migrateReaderModule(ModuleModel $module, ReaderConfigModel $readerConfig)
     {
-
-        if (!$readerConfig || $readerConfig->id < 1)
+        $current = [
+            "name" => $module->name,
+            "id"   => $module->id,
+            "type" => $module->type,
+        ];
+        if (!$readerConfig || ($readerConfig->id < 1 && !$this->dryRun))
         {
             return null;
         }
@@ -416,6 +462,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $this->attachReaderImageElement($module, $readerConfig);
         $this->addNavigationElement($module, $readerConfig);
         $this->addSyndicationElement($module, $readerConfig);
+        $current['new_type'] = $module->type;
+        $this->convertedModules['reader'][] = $current;
         return $readerConfig;
     }
 
@@ -428,6 +476,13 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     public function migrateListModule(ModuleModel $module, Model $listConfig, array $filters)
     {
         $filters["news_archives"] = StringUtil::deserialize($module->news_archives, true);
+        if (static::MOD_ARCHIVE == $module->type)
+        {
+            $filters['date'] = [
+                "format" => $module->news_formatm,
+                "format_reference" => $module->news_format_reference,
+            ];
+        }
         $this->attachListImageElement($module, $listConfig);
 
         if (!$this->copyTemplate($module))
@@ -456,6 +511,11 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     protected function migrateFilterModule(ModuleModel $module, array $filters)
     {
+        $current = [
+            "name" => $module->name,
+            "id"   => $module->id,
+            "type" => $module->type,
+        ];
         $filters["date_range"] = true;
         $filters["submit"]     = true;
         $filters["search"]     = $module->news_filterShowSearch ? true : false;
@@ -485,6 +545,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         if (!$this->dryRun) {
             $module->save();
         }
+        $current['new_type'] = $module->type;
+        $this->convertedModules['filter'][] = $current;
         return $filters;
     }
 
@@ -694,6 +756,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         {
             $sorting = $this->addDateRangeFilter($filterConfig, $sorting);
         }
+        if (isset($filters["data"]))
+        {
+            $sorting = $this->addDataFilter($filterConfig, $sorting, $filters["config"]);
+        }
         $sorting = $this->addPublishedFilter($filterConfig, $sorting);
         if (isset($filters["search"]) && $filters["search"] === true)
         {
@@ -893,7 +959,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             return $sorting;
         }
 
-        if (!$this->getContainer()->get('huh.utils.container')->isBundleActive('HeimrichHannot\CategoriesBundle\CategoriesBundle'))
+        if (!$this->containerUtil->isBundleActive('HeimrichHannot\CategoriesBundle\CategoriesBundle'))
         {
             return $sorting;
         }
@@ -1022,22 +1088,120 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         {
             return true;
         }
-        $this->io->section("Following modules must be converted manuel:");
+        $this->io->section("Manuel migration");
+        $this->io->writeln("Following modules must be converted manually:");
         $moduleList = [];
+        $helpMessages = [];
         foreach ($listModules as $module)
         {
             $current = [
                 "name" => $module->name,
                 "id"   => $module->id,
-                "type" => $module->type,
-                "help" => ""
+                "type" => $module->type
             ];
             if (static::MOD_NEWSMENU == $module->type)
             {
-                $current["help"] = "Change to filter type and add filter of belonging list module.";
+                $helpMessages[0] = "Helping information:";
+                $helpMessages[static::MOD_NEWSMENU] = static::MOD_NEWSMENU.": Change to filter type and add filter of belonging list module. Pay attation, if news_startDay and news_order is set, to update the filter according to this settings.";
             }
             $moduleList[] = $current;
         }
-        $this->io->table(["Name", "ID", "Type", "Help"], $moduleList);
+        $this->io->newLine();
+        $this->io->table(["Name", "ID", "Type"], $moduleList);
+        $this->io->block($helpMessages);
+    }
+
+    protected function addDataFilter($filterConfig, $sorting, $config)
+    {
+        if (!is_array($config) || !isset($config['news_format']))
+        {
+            return $sorting;
+        }
+//        switch ($config['news_format'])
+//        {
+//            case 'news_year':
+//                $format = "Y";
+//                break;
+//            case 'news_month':
+//                $format = "m.Y";
+//                break;
+//            case 'news_day':
+//            default:
+//                $format = "d.m.Y";
+//        }
+
+        $filterElement                   = $this->modelUtil->setDefaultsFromDca(new FilterConfigElementModel());
+        $filterElement->title            = 'Date filter';
+        $filterElement->pid              = $filterConfig->id;
+        $filterElement->sorting          = $sorting * 2;
+        $filterElement->tstamp           = time();
+        $filterElement->dateAdded        = time();
+        $filterElement->type             = DateType::TYPE;
+        $filterElement->name             = 'datefilter';
+        $filterElement->field            = 'date';
+        $filterElement->published        = 1;
+        if (!$this->dryRun) {
+            $filterElement->save();
+        }
+        return $sorting * 2;
+    }
+
+    protected function addJumpTo(ModuleModel $module, ListConfigModel $listConfig, ModuleModel $readerModule = null, ModuleModel $filterModule = null)
+    {
+        $jumpToPage = 0;
+        $rootPages = [];
+        $readerPages = [];
+        $listPages = [];
+        if ($readerModule)
+        {
+            $readerPages = $this->getContainer()->get('huh.utils.model')->findModulePages($readerModule, false, false);
+
+            if (1 === count($readerPages))
+            {
+                $jumpToPage = $readerPages[0];
+            }
+        }
+        if (0 === $jumpToPage )
+        {
+            $listPages = $this->getContainer()->get('huh.utils.model')->findModulePages($module, false, false);
+            if (1 === count($listPages)) {
+                $jumpToPage = $listPages[0];
+            }
+            else {
+                $rootPages = array_intersect($readerPages, $listPages);
+                if (1 === count($rootPages))
+                {
+                    $jumpToPage = $rootPages[0];
+                }
+            }
+        }
+        if (0 === $jumpToPage && $filterModule)
+        {
+            $filterPages = $this->getContainer()->get('huh.utils.model')->findModulePages($filterModule, false, false);
+            if (1 === count($filterPages) && in_array($filterPages[0], $listPages))
+            {
+                $jumpToPage = $filterPages[0];
+            }
+            else {
+                $rootPages = array_intersect($listPages, $filterPages);
+                if (1 === count($rootPages))
+                {
+                    $jumpToPage = $rootPages[0];
+                }
+            }
+        }
+
+        if (0 < $jumpToPage)
+        {
+            $listConfig->addDetails = "1";
+            $listConfig->jumpToDetails = $jumpToPage;
+            if (!$this->dryRun)
+            {
+                $listConfig->save();
+            }
+            return true;
+        }
+        $this->io->note("Multiple or no jumpTo page found for module $module->name ($module->id). Please set jumpTo manually");
+        return false;
     }
 }
