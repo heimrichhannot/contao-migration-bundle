@@ -34,7 +34,6 @@ use HeimrichHannot\ListBundle\Model\ListConfigElementModel;
 use HeimrichHannot\ListBundle\Model\ListConfigModel;
 use HeimrichHannot\ListBundle\Module\ModuleList;
 use HeimrichHannot\MigrationBundle\HeimrichHannotMigrationBundle;
-use HeimrichHannot\NewsBundle\HeimrichHannotContaoNewsBundle;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigModel;
 use HeimrichHannot\ReaderBundle\Module\ModuleReader;
@@ -216,6 +215,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $this->migrateListModules();
             $this->migrateReaderModules();
 
+            $io->section("Results:");
+
             if (!empty($this->convertedModules["list"]))
             {
                 $io->writeln("Converted list modules:");
@@ -273,7 +274,11 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $readerAlreadyConvertedCount = $this->count['readerConverted'];
         $filterAlreadyConvertedCount = $this->count['filterConverted'];
         $this->io->progressFinish();
-        $this->io->writeln("Finished migration of $listCount list modules. Also migrated $readerCount reader modules and $filterCount filter modules linked with list modules.");
+        $this->io->writeln("Finished migration of $listCount list modules.");
+        if ($readerCount > 0 || $filterCount > 0)
+        {
+            $this->io->writeln("Also migrated $readerCount reader modules and $filterCount filter modules linked with list modules.");
+        }
         if ($readerAlreadyConvertedCount > 0)
         {
             $this->io->writeln("$readerAlreadyConvertedCount reader modules were already converted.");
@@ -303,7 +308,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         {
             if ($readerModule = ModuleModel::findById($module->news_readerModule))
             {
-                if (ModuleReader::TYPE !== $readerModule->type || !$readerConfig = ReaderConfigModel::findByPk($readerModule->readerConfig || $this->dryRun))
+                if (ModuleReader::TYPE !== $readerModule->type || !$readerConfig = ReaderConfigModel::findByPk($readerModule->readerConfig))
                 {
                     $readerConfig = $this->createReaderConfig($readerModule);
                     $readerConfig = $this->migrateReaderModule($readerModule, $readerConfig);
