@@ -299,6 +299,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             "type" => $module->type,
         ];
         $filters    = [];
+        $filterAlreadyExists = false;
         $listConfig = $this->createListConfig($module);
         $this->count['list']++;
         $filters = $this->migrateListModule($module, $listConfig, $filters);
@@ -317,6 +318,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
                 {
                     $filterConfig = FilterConfigModel::findByIdOrAlias($readerConfig->filter);
                     $this->count['readerConverted']++;
+                    $filterAlreadyExists = true;
                 }
 
                 $this->processedReaderModules[] = $readerModule->id;
@@ -342,7 +344,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
         if (!$filterConfig)
         {
-            $filterConfig = $this->attachFilter($module);
+            $filterConfig = $this->createFilterConfig($module);
         }
         $listConfig->filter = $filterConfig->id;
         if (!$this->dryRun) {
@@ -370,7 +372,10 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         }
         $current["type_new"] = $module->type;
         $this->convertedModules['list'][] = $current;
-        $this->attachFilterElements($filterConfig, $filters);
+        if (!$filterAlreadyExists)
+        {
+            $this->attachFilterElements($filterConfig, $filters);
+        }
     }
 
     /**
@@ -415,7 +420,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $this->migrateReaderModule($module, $readerConfig);
         $this->count['reader']++;
 
-        $filterConfig             = $this->attachFilter($module);
+        $filterConfig             = $this->createFilterConfig($module);
         $filters                  = [];
         $filters["news_archives"] = StringUtil::deserialize($module->news_archives, true);
         $this->attachFilterElements($filterConfig, $filters);
@@ -731,7 +736,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      * @param ModuleModel $module
      * @return FilterConfigModel|Model
      */
-    protected function attachFilter(ModuleModel $module)
+    protected function createFilterConfig(ModuleModel $module)
     {
         $filterConfig                = $this->modelUtil->setDefaultsFromDca(new FilterConfigModel());
         $filterConfig->tstamp        = $filterConfig->dateAdded = time();
@@ -915,7 +920,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     protected function addSubmitFilter($filterConfig, $sorting)
     {
         $filterElement            = $this->modelUtil->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->title     = 'Date range';
+        $filterElement->title     = 'Submit';
         $filterElement->pid       = $filterConfig->id;
         $filterElement->sorting   = $sorting;
         $filterElement->tstamp    = time();
