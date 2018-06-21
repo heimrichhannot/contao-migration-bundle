@@ -124,7 +124,7 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
         {
             if (!$block = BlockModel::findByPk($input->getOption("block")))
             {
-                $io->error("Given block does could no be found. Please check, if id is correct. Use the block if, not the model id! Aborting...");
+                $io->error("Given block does could no be found. Please check, if id is correct. Use the block id, not the model id! Aborting...");
                 return 1;
             }
             $io->newLine();
@@ -142,6 +142,7 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
             /** @var BlockModel $block */
             $block = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new BlockModel());
             $block->tstamp = time();
+            $block->pid = $modules->pid;
             if ($input->hasOption("title"))
             {
                 $block->title = $input->getOption("title");
@@ -206,17 +207,17 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
             }
             else {
                 $replacedArticles = [];
+                $io->newLine();
                 foreach ($contentElements as $element)
                 {
                     if (in_array($element->pid, $replacedArticles))
                     {
-
+                        $elementId = $element->id;
                         if (!$this->dryRun)
                         {
                             $element->delete();
                         }
-                        $io->newLine();
-                        $io->writeln("Deleted content element with id $element->id, cause block is already integrated in article.");
+                        $io->writeln("Deleted content element with id $elementId, cause block is already integrated in article.");
                     }
                     else {
                         $element->module = $blockModule->id;
@@ -225,7 +226,6 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
                             $element->save();
                         }
                         $replacedArticles[] = $element->pid;
-                        $io->newLine();
                         $io->writeln("Updated content element with id $element->id set module to block model.");
                     }
                 }
@@ -260,6 +260,8 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
         if (!$this->dryRun)
         {
             $blockModule->save();
+            $block->module = $blockModule->id;
+            $block->save();
         }
         $this->io->newLine();
         $this->io->writeln("Create block module $blockModule->name (ID: $blockModule->id)");
