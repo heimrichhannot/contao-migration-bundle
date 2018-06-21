@@ -72,7 +72,7 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
      */
     protected function configure()
     {
-        $this->setName('migration:db:news_categories')->setDescription(
+        $this->setName('huh:migration:db:news_categories')->setDescription(
             'Migration of database entries from news_categories module to heimrichhannot/contao-categories.'
         );
 

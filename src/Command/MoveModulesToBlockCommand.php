@@ -67,12 +67,13 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
     {
         $this->setName('huh:migration:movetoblock')
             ->setDescription('Move given modules to a block.')
-            ->addArgument('modules', InputArgument::IS_ARRAY | InputArgument::REQUIRED)
+            ->setHelp("Move the blocks with the given Ids into one block. Module content elements will be replaced with block content element (can be bypassed with no-replace option). By default a new block will be created, a block id is given as option. Block config for autoitem will be set by command for filter, list and reader modules, unless you deactivate this by set ignore-types option")
+            ->addArgument('modules', InputArgument::IS_ARRAY | InputArgument::REQUIRED, "Ids of modules should migrated into a block.")
             ->addOption("block", "b", InputOption::VALUE_REQUIRED, "Set a block where module should be added to. If not set, a new block is created.")
-            ->addOption("ignoreTypes", null, InputOption::VALUE_NONE, "Don't set custom module settings for block module like !autoitem for reader module.")
+            ->addOption("ignore-types", null, InputOption::VALUE_NONE, "Don't set custom module settings for block module like !autoitem for reader module.")
             ->addOption("dry-run", null, InputOption::VALUE_NONE, "Preview command without changing the database.")
             ->addOption("title", "t", InputOption::VALUE_REQUIRED, "Set a block name for new blocks. If not set, name of first module will be used.")
-            ->addOption("no-replace", "r", InputOption::VALUE_NONE, "Don't replace modules with block.")
+            ->addOption("no-replace", null, InputOption::VALUE_NONE, "Don't replace modules with block.")
         ;
         parent::configure();
     }
@@ -164,7 +165,7 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
             $blockElement->pid = $block->id;
             $blockElement->type = "default";
             $blockElement->module = $module->id;
-            if (!$input->getOption('ignoreTypes'))
+            if (!$input->getOption('ignore-types'))
             {
                 switch($module->type)
                 {
