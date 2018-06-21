@@ -14,6 +14,10 @@ services:
     class: HeimrichHannot\MigrationBundle\Command\NewsPlusModuleMigrationCommand
     arguments: ['@contao.framework', '@huh.utils.model', '@translator', '@huh.utils.container']
 
+  huh.migration.modulestoblock:
+    class: HeimrichHannot\MigrationBundle\Command\MoveModulesToBlockCommand
+    arguments: ['@contao.framework', '@huh.utils.model']
+
   ## Database Commands
 
   huh.migration.database.newscategories:
