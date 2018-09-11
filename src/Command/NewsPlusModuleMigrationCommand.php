@@ -460,7 +460,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
         $module->tstamp       = time();
         $module->readerConfig = $readerConfig->id;
-        $module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
+        $module->type         = ModuleReader::TYPE;
         if (!$this->dryRun)
         {
             $module->save();
