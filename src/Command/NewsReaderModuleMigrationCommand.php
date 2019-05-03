@@ -2,10 +2,8 @@
 
 namespace HeimrichHannot\MigrationBundle\Command;
 
-use function Clue\StreamFilter\remove;
 use Contao\ModuleModel;
 use Contao\StringUtil;
-use Contao\System;
 use HeimrichHannot\FilterBundle\Model\FilterConfigElementModel;
 use HeimrichHannot\FilterBundle\Model\FilterConfigModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
@@ -69,7 +67,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
     {
         $this->module = $module;
 
-        $this->readerConfig                             = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigModel());
+        $this->readerConfig                             = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigModel());
         $this->readerConfig->tstamp                     = time();
         $this->readerConfig->dateAdded                  = time();
         $this->readerConfig->title                      = $this->module->name;
@@ -91,7 +89,9 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
             ['service' => 'huh.head.tag.og_description', 'pattern' => '%teaser%'],
         ];
 
-        $this->readerConfig->save();
+        if (!$this->isDryRun()) {
+            $this->readerConfig->save();
+        }
 
         if ($this->readerConfig->id > 0) {
             $this->output->writeln('Migrated "' . $this->module->name . '" (Module ID:' . $this->module->id . ') into new reader config with ID: ' . $this->readerConfig->id . '.');
@@ -121,7 +121,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
             return 1;
         }
 
-        $readerConfigElement                      = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
+        $readerConfigElement                      = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
         $readerConfigElement->tstamp              = time();
         $readerConfigElement->dateAdded           = time();
         $readerConfigElement->pid                 = $this->readerConfig->id;
@@ -168,7 +168,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
 
     protected function addNavigationElement()
     {
-        $readerConfigElement                     = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
+        $readerConfigElement                     = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
         $readerConfigElement->tstamp             = time();
         $readerConfigElement->dateAdded          = time();
         $readerConfigElement->pid                = $this->readerConfig->id;
@@ -183,9 +183,12 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
         $readerConfigElement->nextTitle          = 'huh.reader.element.title.next.default';
         $readerConfigElement->previousTitle      = 'huh.reader.element.title.previous.default';
         $readerConfigElement->infiniteNavigation = (bool)$this->module->news_navigation_infinite;
-        $readerConfigElement->save();
 
-        if ($readerConfigElement->id > 0) {
+        if (!$this->isDryRun()) {
+            $readerConfigElement->save();
+        }
+
+        if ($readerConfigElement->id > 0 || $this->isDryRun()) {
             $this->readerConfigElements[] = $readerConfigElement;
 
             return 0;
@@ -196,7 +199,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
 
     protected function attachReaderImageElement()
     {
-        $readerConfigElement                     = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
+        $readerConfigElement                     = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ReaderConfigElementModel());
         $readerConfigElement->tstamp             = time();
         $readerConfigElement->dateAdded          = time();
         $readerConfigElement->pid                = $this->readerConfig->id;
@@ -205,9 +208,13 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
         $readerConfigElement->imageSelectorField = 'addImage';
         $readerConfigElement->imageField         = 'singleSRC';
         $readerConfigElement->imgSize            = $this->module->imgSize;
-        $readerConfigElement->save();
 
-        if ($readerConfigElement->id > 0) {
+        if (!$this->isDryRun())
+        {
+            $readerConfigElement->save();
+        }
+
+        if ($readerConfigElement->id > 0 || $this->isDryRun()) {
             $this->readerConfigElements[] = $readerConfigElement;
 
             return 0;
@@ -218,31 +225,39 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
 
     protected function attachFilter()
     {
-        $this->filterConfig                = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
+        $this->filterConfig                = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
         $this->filterConfig->tstamp        = time();
         $this->filterConfig->dateAdded     = time();
         $this->filterConfig->title         = $this->module->name;
-        $this->filterConfig->name          = \Contao\StringUtil::standardize($this->module->name);
+        $this->filterConfig->name          = StringUtil::standardize($this->module->name);
         $this->filterConfig->dataContainer = 'tl_news';
         $this->filterConfig->method        = 'GET';
         $this->filterConfig->template      = 'form_div_layout';
         $this->filterConfig->published     = 1;
-        $this->filterConfig->save();
 
-        if ($this->filterConfig->id > 0) {
-            $this->output->writeln('Created filter config for module "' . $this->module->name . '" (Module ID:' . $this->module->id . ') with ID: ' . $this->filterConfig->id . '.');
+        if (!$this->isDryRun())
+        {
+            $this->filterConfig->save();
+
+            if ($this->filterConfig->id > 0) {
+                $this->output->writeln('Created filter config for module "' . $this->module->name . '" (Module ID:' . $this->module->id . ') with ID: ' . $this->filterConfig->id . '.');
 
 
-            $this->readerConfig->filter = $this->filterConfig->id;
+                $this->readerConfig->filter = $this->filterConfig->id;
 
-            if ($this->readerConfig->save()) {
-                $this->output->writeln('Updated reader config for "' . $this->module->name . '" (Module ID:' . $this->module->id . ') and set new filter config ID: ' . $this->filterConfig->id . '.');
+                if ($this->readerConfig->save()) {
+                    $this->output->writeln('Updated reader config for "' . $this->module->name . '" (Module ID:' . $this->module->id . ') and set new filter config ID: ' . $this->filterConfig->id . '.');
 
-                $this->attachFilterElements();
+                    $this->attachFilterElements();
 
-                return 0;
+                    return 0;
+                }
             }
         }
+        else {
+            return 0;
+        }
+
 
         return 1;
     }
@@ -352,4 +367,13 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
 //
 //        return 1;
 //    }
+    /**
+     * Returns a list of frontend module types that are supported by this command.
+     *
+     * @return array
+     */
+    static function getTypes(): array
+    {
+        return static::getTypes();
+    }
 }

@@ -28,11 +28,6 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
     protected $io;
 
     /**
-     * @var array
-     */
-    protected static $types = [];
-
-    /**
      * A collection of models or null if there are no
      *
      * @var \Contao\Model\Collection|\Contao\ModuleModel[]|\Contao\ModuleModel|null
@@ -58,12 +53,23 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
      */
     protected $framework;
 
+    /**
+     * @var bool
+     */
+    protected $dryRun = false;
+
     public function __construct(ContaoFrameworkInterface $framework)
     {
         $this->framework = $framework;
         parent::__construct();
     }
 
+    /**
+     * Returns a list of frontend module types that are supported by this command.
+     *
+     * @return array
+     */
+    abstract static function getTypes(): array;
 
     /**
      * @inheritdoc
@@ -71,7 +77,8 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
     protected function configure()
     {
         $this->addOption('id', 'i', InputOption::VALUE_OPTIONAL, 'Provide the id of a single module that should be migrated.');
-        $this->addOption('types', 't', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'What module types should be migrated?', static::$types);
+        $this->addOption('types', 't', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'What module types should be migrated?', static::getTypes());
+        $this->addOption('dry-run', null, InputOption::VALUE_NONE, "Performs a run without writing to datebase and copy templates.");
     }
 
     /**
@@ -86,13 +93,20 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
         $this->output  = $output;
 
         $this->io->newLine();
-        $this->output->writeln("<fg=green>Start migration for module of type: ".implode(static::$types)."</>");
+        $this->output->writeln("<fg=green>Start migration for module of type: ".implode(static::getTypes())."</>");
+
+        if ($input->hasOption('dry-run') && $input->getOption('dry-run'))
+        {
+            $this->dryRun = true;
+            $this->io->note("Dry run enabled, no data will be changed.");
+            $this->io->newLine();
+        }
 
         $this->rootDir = $this->getContainer()->getParameter('kernel.project_dir');
 
         $this->queryBuilder = new QueryBuilder($this->getContainer()->get('doctrine.dbal.default_connection'));
 
-        $types = array_intersect(static::$types, $input->getOption('types'));
+        $types = array_intersect(static::getTypes(), $input->getOption('types'));
 
         if (empty($types)) {
 
@@ -143,7 +157,7 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
         $options['column'] = [
             'tl_module.type IN (' . implode(',', array_map(function ($type) {
                 return '"' . addslashes($type) . '"';
-            }, static::$types)) . ')'
+            }, static::getTypes())) . ')'
         ];
 
         if ($id > 0) {
@@ -153,4 +167,21 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
 
         return ModuleModel::findAll($options);
     }
+
+    /**
+     * @return bool
+     */
+    public function isDryRun(): bool
+    {
+        return $this->dryRun;
+    }
+
+    /**
+     * @param bool $dryRun
+     */
+    public function setDryRun(bool $dryRun): void
+    {
+        $this->dryRun = $dryRun;
+    }
 }
+
