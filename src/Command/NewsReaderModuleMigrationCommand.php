@@ -374,6 +374,6 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
      */
     static function getTypes(): array
     {
-        return static::getTypes();
+        return static::$types;
     }
 }

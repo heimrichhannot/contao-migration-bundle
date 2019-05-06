@@ -11,6 +11,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
 use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\Model;
 use Contao\Model\Collection;
 use Contao\ModuleModel;
 use Doctrine\DBAL\Query\QueryBuilder;
@@ -57,6 +58,10 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
      * @var bool
      */
     protected $dryRun = false;
+
+    protected $migrationSql = [];
+
+    protected $upgradeNotices = [];
 
     public function __construct(ContaoFrameworkInterface $framework)
     {
@@ -123,6 +128,22 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
 
         $this->migrateAll();
 
+        if ($this->hasMigrationSql())
+        {
+            $this->io->section("Migration SQL Command");
+            $this->io->text("These are the MySql commands, if you want to do a database merge later while keeping newly added settings. Add the following lines to your database migration scripts.");
+            $this->io->newLine();
+            $this->io->text($this->getMigrationSql());
+        }
+
+        if ($this->hasUpgradeNotices())
+        {
+            $this->io->section("Migration Notices");
+            $this->io->listing($this->getUpgradeNotices());
+        }
+
+        $this->io->success("Finished migration of ".$this->modules->count()." modules.");
+
         return 0;
     }
 
@@ -169,6 +190,52 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
     }
 
     /**
+     * Map values of an old entitiy to an new entity.
+     *
+     * Mapping Array:
+     * * Key is old entity property name
+     * * Value is new entity property name or an array with following options:
+     *     * 'key': new entity property key
+     *     * 'callable': a mapping function. Gets old entity value as parameter.
+     *
+     *
+     * @param Model|\stdClass $oldEntity
+     * @param Model $newEntity
+     * @param array $mapping
+     * @param string $oldEntityKeySuffix Example: 'owl_'
+     * @param string $newEntityKeySuffix Example: 'tinySlider_'
+     */
+    public function map($oldEntity, &$newEntity, array $mapping, string $oldEntityKeySuffix = '', string $newEntityKeySuffix = ''): void
+    {
+        foreach ($mapping as $owlIndex => $tinySliderIndex)
+        {
+            if ($oldEntity->{$oldEntityKeySuffix.$owlIndex})
+            {
+                if (is_array($tinySliderIndex))
+                {
+                    if (!isset($tinySliderIndex['key']))
+                    {
+                        $this->io->note("Missing index 'key' for value of mapping index ".$owlIndex);
+                        continue;
+                    }
+                    if (isset($tinySliderIndex['callable']) && is_callable($tinySliderIndex['callable']))
+                    {
+                        $value = $tinySliderIndex($oldEntity->{$oldEntityKeySuffix.$owlIndex});
+                    }
+                    else {
+                        $value = $oldEntity->{$oldEntityKeySuffix.$owlIndex};
+                    }
+                }
+                else
+                {
+                    $value = $oldEntity->{$oldEntityKeySuffix.$owlIndex};
+                }
+                $newEntity->{$newEntityKeySuffix.$tinySliderIndex} = $value;
+            }
+        }
+    }
+
+    /**
      * @return bool
      */
     public function isDryRun(): bool
@@ -183,5 +250,43 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
     {
         $this->dryRun = $dryRun;
     }
+
+    protected function addMigrationSql(string $sql): void
+    {
+        $this->migrationSql[] = $sql;
+    }
+
+    protected function getMigrationSql(): array
+    {
+        return $this->migrationSql;
+    }
+
+    public function hasMigrationSql(): bool {
+        return !empty($this->migrationSql);
+    }
+
+    /**
+     * @return array
+     */
+    public function getUpgradeNotices(): array
+    {
+        return $this->upgradeNotices;
+    }
+
+    /**
+     * @param string $upgradeNotices
+     */
+    public function addUpgradeNotices(string $upgradeNotice): void
+    {
+        $this->upgradeNotices[] = $upgradeNotice;
+    }
+
+    public function hasUpgradeNotices(): bool
+    {
+        return !empty($this->upgradeNotices);
+    }
+
+
 }
+
 
