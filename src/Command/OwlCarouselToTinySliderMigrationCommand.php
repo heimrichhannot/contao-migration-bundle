@@ -27,13 +27,6 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
     use NewsListToListTrait;
     use MigrateNewsListItemTemplateToListTemplateTrait;
 
-    public function isDryRun(): bool
-    {
-        // Don't save while not ready
-        return true;
-    }
-
-
     protected function configure()
     {
         $this->setName("huh:migration:module:owlcarousel")

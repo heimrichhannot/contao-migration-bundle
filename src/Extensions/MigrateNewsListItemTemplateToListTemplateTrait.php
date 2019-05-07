@@ -44,6 +44,7 @@ trait MigrateNewsListItemTemplateToListTemplateTrait
             }
             return 0;
         }
+        $this->processedNewsListTemplates[] = $module->news_template;
 
         try {
             $templatePath     = Controller::getTemplate($module->news_template);

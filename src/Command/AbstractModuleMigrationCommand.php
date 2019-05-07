@@ -121,9 +121,11 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
         }
 
         if (empty($this->modules = $this->collect($input->getOption('id')))) {
-            $this->io->note('No modules of types' . implode(",", $types) . ' could be found.');
+            $this->io->note('No modules of types ' . implode(",", $types) . ' could be found.');
 
-            return 1;
+
+            $this->io->success("Finished migration!");
+            return 0;
         }
 
         $this->migrateAll();

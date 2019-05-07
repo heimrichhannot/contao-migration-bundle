@@ -36,13 +36,14 @@ trait NewsListToListTrait
 {
     /**
      * @param ModuleModel $module
-     * @param int $filterConfig
+     * @param int $filterConfigId
      * @return array ['config' => ListConfigModel, 'configElements' => ListConfigElementModel[]]
      */
-    protected function createListConfig(ModuleModel $module, int $filterConfig): array
+    protected function createListConfig(ModuleModel $module, int $filterConfigId): array
     {
         /** @var ListConfigModel $listConfig */
         $listConfig                    = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ListConfigModel());
+        $listConfig->filter            = $filterConfigId;
         $listConfig->tstamp            = $listConfig->dateAdded = time();
         $listConfig->title             = $module->name;
         $listConfig->numberOfItems     = $module->numberOfItems;
@@ -95,7 +96,6 @@ trait NewsListToListTrait
         $listConfigElement->pid = $listConfigId;
         $listConfigElement->tstamp = $listConfigElement->dateAdded = time();
         $listConfigElement->title = 'News Image';
-        $listConfigElement->templateVariable = 'image';
         $listConfigElement->imageSelectorField = 'addImage';
         $listConfigElement->imageField = 'singleSRC';
         $listConfigElement->imgSize = $imgSize;
