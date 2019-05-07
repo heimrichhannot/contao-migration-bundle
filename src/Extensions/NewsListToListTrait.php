@@ -18,6 +18,7 @@ use HeimrichHannot\ListBundle\Backend\ListConfig;
 use HeimrichHannot\ListBundle\Backend\ListConfigElement;
 use HeimrichHannot\ListBundle\Model\ListConfigElementModel;
 use HeimrichHannot\ListBundle\Model\ListConfigModel;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -26,6 +27,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @method ContainerInterface getContainer
  * @method bool isDryRun
+ * @method void addMigrationSql(string $sql)
+ * @method void addUpgradeNotices(string $upgradeNotice)
+ *
+ * @property SymfonyStyle $io
  */
 trait NewsListToListTrait
 {

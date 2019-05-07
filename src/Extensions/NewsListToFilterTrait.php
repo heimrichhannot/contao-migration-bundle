@@ -18,6 +18,7 @@ use HeimrichHannot\FilterBundle\Filter\AbstractType;
 use HeimrichHannot\FilterBundle\Model\FilterConfigElementModel;
 use HeimrichHannot\FilterBundle\Model\FilterConfigModel;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -26,6 +27,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @method ContainerInterface getContainer
  * @method bool isDryRun
+ * @method void addMigrationSql(string $sql)
+ * @method void addUpgradeNotices(string $upgradeNotice)
+ *
+ * @property SymfonyStyle $io
  */
 trait NewsListToFilterTrait
 {

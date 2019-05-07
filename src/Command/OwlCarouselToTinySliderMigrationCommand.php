@@ -15,6 +15,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 use Contao\ModuleModel;
 use Contao\StringUtil;
 use HeimrichHannot\ListBundle\Module\ModuleList;
+use HeimrichHannot\MigrationBundle\Extensions\MigrateNewsListItemTemplateToListTemplateTrait;
 use HeimrichHannot\MigrationBundle\Extensions\NewsListToFilterTrait;
 use HeimrichHannot\MigrationBundle\Extensions\NewsListToListTrait;
 use HeimrichHannot\TinySliderBundle\DataContainer\TinySliderConfigContainer;
@@ -24,6 +25,7 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
 {
     use NewsListToFilterTrait;
     use NewsListToListTrait;
+    use MigrateNewsListItemTemplateToListTemplateTrait;
 
     public function isDryRun(): bool
     {
@@ -52,6 +54,7 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
         $listConfig = $listConfigData['config'];
         $sliderConfig = $this->createTinySliderConfig($module);
         $this->migrateFrontendModule($module, $listConfig->id);
+        $this->copyNewsItemTemplate($module, $listConfig);
 
         $listConfig->addTinySlider = "1";
         $listConfig->tinySliderConfig = $sliderConfig->id;
