@@ -3,7 +3,9 @@
 A collection of various migration scripts.
 
 ## Features
-* Convert News Plus modules to [Filter](https://github.com/heimrichhannot/contao-filter-bundle)/[List](https://github.com/heimrichhannot/contao-list-bundle)/[Reader](https://github.com/heimrichhannot/contao-reader-bundle) modules.
+* convert frontend modules to [Filter](https://github.com/heimrichhannot/contao-filter-bundle)/[List](https://github.com/heimrichhannot/contao-list-bundle)/[Reader](https://github.com/heimrichhannot/contao-reader-bundle) modules:
+    * News Plus frontend module
+    * Owl carousel news list
 * move modules into [blocks](https://github.com/heimrichhannot/contao-blocks)
 * move news_categories to [Categories](https://github.com/heimrichhannot/contao-categories-bundle)
 
@@ -91,3 +93,21 @@ Option              | Description
 --------------------|-----
 -i, --id[=ID]       |Provide the id of a single module that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["newsreader","newsreader_plus"]] (multiple values allowed)
+--dry-run           | Performs a run without writing to datebase and copy templates.
+
+### Convert Owl Carousel News List to Filter/List modules
+
+Usage: 
+```
+huh:migration:module:owlcarousel [options]
+```
+
+Options:
+
+Option              | Description
+--------------------|-----
+-i, --id[=ID]       | Provide the id of a single module that should be migrated.
+-t, --types[=TYPES] | What module types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
+--dry-run           | Performs a run without writing to datebase and copy templates.
+
+Since: `0.2.0`
