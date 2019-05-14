@@ -97,8 +97,7 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
         $this->input   = $input;
         $this->output  = $output;
 
-        $this->io->newLine();
-        $this->output->writeln("<fg=green>Start migration for module of type: ".implode(static::getTypes())."</>");
+        $this->io->title("Start migration for modules of type: ".implode(static::getTypes()));
 
         if ($input->hasOption('dry-run') && $input->getOption('dry-run'))
         {
@@ -127,6 +126,8 @@ abstract class AbstractModuleMigrationCommand extends AbstractLockedCommand
             $this->io->success("Finished migration!");
             return 0;
         }
+
+        $this->io->text("Found ".count($this->elements).' modules.');
 
         $this->migrateAll();
 

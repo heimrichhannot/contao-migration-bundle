@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.3.0-DEV] - 2019-05-14
+
+* added `AbstractMigrationCommand` class
+* added `AbstractContentElementMigrationCommand` class
+* added Tab Control bundle migration command `huh:migration:ce:tab_control_bundle`
+
 ## [0.2.2] - 2019-05-08
 
 * fixed missing licence file
