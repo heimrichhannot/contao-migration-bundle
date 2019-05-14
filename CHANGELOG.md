@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [0.3.0-DEV] - 2019-05-14
+## [0.3.0] - 2019-05-14
 
 * added `AbstractMigrationCommand` class
 * added `AbstractContentElementMigrationCommand` class
