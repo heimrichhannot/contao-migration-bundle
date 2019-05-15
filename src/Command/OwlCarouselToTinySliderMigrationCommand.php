@@ -12,6 +12,7 @@
 namespace HeimrichHannot\MigrationBundle\Command;
 
 
+use Contao\Model;
 use Contao\ModuleModel;
 use Contao\StringUtil;
 use HeimrichHannot\ListBundle\Module\ModuleList;
@@ -37,9 +38,10 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
 
     /**
      * Run custom migration on each module
+     * @param ModuleModel|Model $module
      * @return mixed
      */
-    protected function migrate(ModuleModel $module): int
+    protected function migrate(Model $module): int
     {
         $filterConfigData = $this->createNewsFilter($module);
         $filterConfig = $filterConfigData['config'];
@@ -195,5 +197,17 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
     static function getTypes(): array
     {
         return ['owl_newslist'];
+    }
+
+    /**
+     * This method is used to check, if migration command could be execute.
+     * This is the place to check if a needed bundle is installed or database fields exist.
+     * Return false, to stop the migration command.
+     *
+     * @return bool
+     */
+    protected function beforeMigrationCheck(): bool
+    {
+        return true;
     }
 }

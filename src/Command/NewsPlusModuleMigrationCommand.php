@@ -20,6 +20,7 @@ use Contao\Model\Collection;
 use Contao\ModuleModel;
 use Contao\NewsArchiveModel;
 use Contao\StringUtil;
+use Exception;
 use HeimrichHannot\FilterBundle\Filter\Type\ChoiceType;
 use HeimrichHannot\FilterBundle\Filter\Type\DateRangeType;
 use HeimrichHannot\FilterBundle\Filter\Type\DateType;
@@ -754,6 +755,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
     /**
      * @param FilterConfigModel|Model $filterConfig
+     * @param array $filters
      */
     protected function attachFilterElements(Model $filterConfig, array $filters = [])
     {
@@ -1028,7 +1030,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         try
         {
             $templatePath = Controller::getTemplate($module->news_template);
-        } catch (\Exception $e)
+        } catch (Exception $e)
         {
             if (in_array($module->news_template, static::NEWSPLUS_TEMPLATES))
             {
@@ -1096,7 +1098,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $listModules = $this->findModules(static::NON_CONVERTABLE_MODULES);
         if (!$listModules)
         {
-            return true;
+            return;
         }
         $this->io->section("Manuel migration");
         $this->io->writeln("Following modules must be converted manually:");

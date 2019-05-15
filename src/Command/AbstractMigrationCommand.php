@@ -17,6 +17,7 @@ use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
 use Contao\Model;
 use Contao\Model\Collection;
 use Doctrine\DBAL\Query\QueryBuilder;
+use stdClass;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -201,6 +202,52 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
             $this->migrate($element);
         }
         $this->io->progressFinish();
+    }
+
+    /**
+     * Map values of an old entitiy to an new entity.
+     *
+     * Mapping Array:
+     * * Key is old entity property name
+     * * Value is new entity property name or an array with following options:
+     *     * 'key': new entity property key
+     *     * 'callable': a mapping function. Gets old entity value as parameter.
+     *
+     *
+     * @param Model|stdClass $oldEntity
+     * @param Model $newEntity
+     * @param array $mapping
+     * @param string $oldEntityKeySuffix Example: 'owl_'
+     * @param string $newEntityKeySuffix Example: 'tinySlider_'
+     */
+    public function map($oldEntity, &$newEntity, array $mapping, string $oldEntityKeySuffix = '', string $newEntityKeySuffix = ''): void
+    {
+        foreach ($mapping as $owlIndex => $tinySliderIndex)
+        {
+            if ($oldEntity->{$oldEntityKeySuffix.$owlIndex})
+            {
+                if (is_array($tinySliderIndex))
+                {
+                    if (!isset($tinySliderIndex['key']))
+                    {
+                        $this->io->note("Missing index 'key' for value of mapping index ".$owlIndex);
+                        continue;
+                    }
+                    if (isset($tinySliderIndex['callable']) && is_callable($tinySliderIndex['callable']))
+                    {
+                        $value = $tinySliderIndex($oldEntity->{$oldEntityKeySuffix.$owlIndex});
+                    }
+                    else {
+                        $value = $oldEntity->{$oldEntityKeySuffix.$owlIndex};
+                    }
+                }
+                else
+                {
+                    $value = $oldEntity->{$oldEntityKeySuffix.$owlIndex};
+                }
+                $newEntity->{$newEntityKeySuffix.$tinySliderIndex} = $value;
+            }
+        }
     }
 
     /**

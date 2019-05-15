@@ -2,15 +2,17 @@
 
 namespace HeimrichHannot\MigrationBundle\Command;
 
+use Contao\Controller;
+use Contao\Model;
 use Contao\ModuleModel;
 use Contao\StringUtil;
 use HeimrichHannot\FilterBundle\Model\FilterConfigElementModel;
 use HeimrichHannot\FilterBundle\Model\FilterConfigModel;
+use HeimrichHannot\ListBundle\Backend\ListConfig;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigElementModel;
 use HeimrichHannot\ReaderBundle\Model\ReaderConfigModel;
+use HeimrichHannot\ReaderBundle\Module\ModuleReader;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use UAParser\Exception\FileNotFoundException;
@@ -61,9 +63,10 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
     }
 
     /**
-     * @inheritDoc
+     * @param ModuleModel $module
+     * @return int
      */
-    protected function migrate(ModuleModel $module): int
+    protected function migrate(Model $module): int
     {
         $this->module = $module;
 
@@ -178,7 +181,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
         $readerConfigElement->navigationTemplate = 'readernavigation_default';
         $readerConfigElement->nextLabel          = 'huh.reader.element.label.next.default';
         $readerConfigElement->previousLabel      = 'huh.reader.element.label.previous.default';
-        $readerConfigElement->sortingDirection   = \HeimrichHannot\ListBundle\Backend\ListConfig::SORTING_DIRECTION_DESC;
+        $readerConfigElement->sortingDirection   = ListConfig::SORTING_DIRECTION_DESC;
         $readerConfigElement->sortingField       = 'date';
         $readerConfigElement->nextTitle          = 'huh.reader.element.title.next.default';
         $readerConfigElement->previousTitle      = 'huh.reader.element.title.previous.default';
@@ -296,7 +299,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
 
     protected function addParentFilterElement($sorting)
     {
-        $pids = \Contao\StringUtil::deserialize($this->module->news_archives, true);
+        $pids = StringUtil::deserialize($this->module->news_archives, true);
 
         if (empty($pids)) {
             return $sorting;
@@ -332,7 +335,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
 
     protected function copyNewsTemplate()
     {
-        $templatePath     = \Controller::getTemplate($this->module->news_template);
+        $templatePath     = Controller::getTemplate($this->module->news_template);
         $twigTemplatePath = $this->getContainer()->get('huh.utils.container')->getProjectDir() . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $this->module->news_template . '.html.twig';
 
         if (!file_exists($twigTemplatePath)) {
@@ -357,7 +360,7 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
     {
         $this->module->tstamp       = time();
         $this->module->readerConfig = $this->readerConfig->id;
-        $this->module->type         = \HeimrichHannot\ReaderBundle\Backend\Module::MODULE_READER;
+        $this->module->type         = ModuleReader::TYPE;
 
         if ($this->module->save()) {
             $this->output->writeln('Updated "' . $this->module->name . '" (Module ID:' . $this->module->id . ') and set new reader config ID: ' . $this->readerConfig->id . '.');
@@ -375,5 +378,17 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
     static function getTypes(): array
     {
         return static::$types;
+    }
+
+    /**
+     * This method is used to check, if migration command could be execute.
+     * This is the place to check if a needed bundle is installed or database fields exist.
+     * Return false, to stop the migration command.
+     *
+     * @return bool
+     */
+    protected function beforeMigrationCheck(): bool
+    {
+        return true;
     }
 }
