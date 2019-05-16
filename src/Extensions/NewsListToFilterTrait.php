@@ -12,9 +12,12 @@
 namespace HeimrichHannot\MigrationBundle\Extensions;
 
 
+use Contao\Model;
 use Contao\ModuleModel;
 use Contao\StringUtil;
 use HeimrichHannot\FilterBundle\Filter\AbstractType;
+use HeimrichHannot\FilterBundle\Filter\Type\ParentType;
+use HeimrichHannot\FilterBundle\Filter\Type\PublishedType;
 use HeimrichHannot\FilterBundle\Model\FilterConfigElementModel;
 use HeimrichHannot\FilterBundle\Model\FilterConfigModel;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
@@ -28,7 +31,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @method ContainerInterface getContainer
  * @method bool isDryRun
  * @method void addMigrationSql(string $sql)
- * @method void addUpgradeNotices(string $upgradeNotice)
+ * @method void addUpgradeNotices(string $type, string $upgradeNotice)
+ * @method void save(Model $model)
  *
  * @property SymfonyStyle $io
  */
@@ -40,23 +44,11 @@ trait NewsListToFilterTrait
      */
     public function createNewsFilter(ModuleModel $module)
     {
-        $filterConfig                = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
-        $filterConfig->tstamp        = $filterConfig->dateAdded = time();
-        $filterConfig->title         = $module->name;
-        $filterConfig->name          = StringUtil::standardize($module->name);
-        $filterConfig->dataContainer = 'tl_news';
-        $filterConfig->method        = 'GET';
-        $filterConfig->template      = 'form_div_layout';
-        $filterConfig->published     = 1;
-        if (!$this->isDryRun()) {
-            $filterConfig->save();
-        }
-        else {
-            $filterConfig->id = 0;
-        }
-        $parentFilterConfigElement = $this->addParentFilterConfigElement($filterConfig->id, 8, StringUtil::deserialize($module->news_archives, true));
-        $publishedFilterConfigElement = $this->addPublishedFilterConfigElement($filterConfig->id, 16);
-        $featuredFilterConfigElement = $this->addFeaturesFilterConfigElement($filterConfig->id, 32, $module->news_featured);
+        $filterConfig = $this->buildNewsFilter($module);
+
+        $parentFilterConfigElement = $this->buildNewsParentFilterConfigElement($filterConfig->id, 2, StringUtil::deserialize($module->news_archives, true));
+        $publishedFilterConfigElement = $this->buildNewsPublishedFilterConfigElement($filterConfig->id, 4);
+        $featuredFilterConfigElement = $this->buildNewsFeaturesFilterConfigElement($filterConfig->id, 8, $module->news_featured);
 
         return [
             'config' => $filterConfig,
@@ -69,12 +61,37 @@ trait NewsListToFilterTrait
     }
 
     /**
+     * Build a filter model out of module
+     *
+     * @param ModuleModel $module
+     * @return FilterConfigModel
+     */
+    protected function buildNewsFilter(ModuleModel $module)
+    {
+        $filterConfig                = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
+        $filterConfig->tstamp        = $filterConfig->dateAdded = time();
+        $filterConfig->title         = $module->name;
+        $filterConfig->name          = preg_replace(['/ä/i', '/ö/i', '/ü/i', '/ß/i'], ['ae', 'oe', 'ue', 'ss'], StringUtil::generateAlias($module->name));
+        $filterConfig->dataContainer = 'tl_news';
+        $filterConfig->method        = 'GET';
+        $filterConfig->template      = 'form_div_layout';
+        $filterConfig->published     = 1;
+        if (!$this->isDryRun()) {
+            $filterConfig->save();
+        }
+        else {
+            $filterConfig->id = 0;
+        }
+        return $filterConfig;
+    }
+
+    /**
      * @param int $filterId
      * @param int $sorting
      * @param array $pids
      * @return FilterConfigElementModel|null
      */
-    protected function addParentFilterConfigElement(int $filterId, int $sorting, array $pids)
+    protected function buildNewsParentFilterConfigElement(int $filterId, int $sorting, array $pids)
     {
         if (empty($pids))
         {
@@ -88,15 +105,15 @@ trait NewsListToFilterTrait
         }
 
         $filterElement                    = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->title             = 'News Archives';
         $filterElement->pid               = $filterId;
-        $filterElement->sorting           = $sorting;
         $filterElement->tstamp            = time();
         $filterElement->dateAdded         = time();
-        $filterElement->type              = 'parent';
+        $filterElement->sorting           = $sorting;
+        $filterElement->title             = 'News Archives';
+        $filterElement->type              = ParentType::TYPE;
         $filterElement->isInitial         = 1;
-        $filterElement->operator          = DatabaseUtil::OPERATOR_IN;
         $filterElement->field             = 'pid';
+        $filterElement->operator          = DatabaseUtil::OPERATOR_IN;
         $filterElement->initialValueType  = 'array';
         $filterElement->initialValueArray = serialize($initialValueArray);
         $filterElement->published         = 1;
@@ -106,27 +123,27 @@ trait NewsListToFilterTrait
         return $filterElement;
     }
 
-    protected function addPublishedFilterConfigElement(int $filterId, $sorting)
+    protected function buildNewsPublishedFilterConfigElement(int $filterId, $sorting)
     {
         $filterElement                  = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->title           = 'Published';
         $filterElement->pid             = $filterId;
-        $filterElement->sorting         = $sorting;
         $filterElement->tstamp          = time();
         $filterElement->dateAdded       = time();
-        $filterElement->type            = 'visible';
+        $filterElement->sorting         = $sorting;
+        $filterElement->title           = 'Published';
+        $filterElement->type            = PublishedType::TYPE;
         $filterElement->field           = 'published';
-        $filterElement->published       = 1;
         $filterElement->addStartAndStop = 1;
         $filterElement->startField      = 'start';
         $filterElement->stopField       = 'stop';
+        $filterElement->published       = 1;
         if (!$this->isDryRun()) {
             $filterElement->save();
         }
         return $filterElement;
     }
 
-    protected function addFeaturesFilterConfigElement(int $filterId, $sorting, ?string $featured = null)
+    protected function buildNewsFeaturesFilterConfigElement(int $filterId, $sorting, ?string $featured = null)
     {
         if (!$featured || $featured === 'all_items' || !in_array($featured, ['featured','unfeatured'])) {
             return null;

@@ -25,7 +25,103 @@ A collection of various migration scripts.
 Use [command] --help to get more information.
 
 
-### News Categories to Categories Bundle
+### Modules
+
+#### Convert News Archive Menu to Filter Bundle 
+
+Usage: 
+```
+huh:migration:module:newsmenu [options]
+```
+
+Options:
+
+Option              | Description
+--------------------|-----
+-i, --id[=ID]       | Provide the id of a single modules that should be migrated.
+-t, --types[=TYPES] | What module types should be migrated? [default: ["newsmenu"]] (multiple values allowed)
+--dry-run           | Performs a run without writing to datebase and copy templates.
+
+Since: `0.4.0`
+
+#### Convert Owl Carousel News List to Filter/List modules
+
+Usage: 
+```
+huh:migration:module:owlcarousel [options]
+```
+
+Options:
+
+Option              | Description
+--------------------|-----
+-i, --id[=ID]       | Provide the id of a single module that should be migrated.
+-t, --types[=TYPES] | What module types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
+--dry-run           | Performs a run without writing to datebase and copy templates.
+
+Since: `0.2.0`
+
+#### Convert News Plus modules to Filter/List/Readerbundle modules
+
+Usage:
+```
+huh:migration:module:newsplus [options]
+```
+  
+Options:
+
+Option              | Description
+--------------------|-----
+--dry-run           | Performs a run without writing to datebase and copy templates.
+-m, --module=MODULE | Convert a single module instead of all modules.
+
+#### Convert News Plus reader modules to Filter/Readerbundle modules
+
+Migration of tl_module type:newsreader modules to huhreader and creates reader configurations from old tl_module settings.
+
+Usage:
+```
+migration:module:newsreader [options]
+```
+
+Options:
+
+Option              | Description
+--------------------|-----
+-i, --id[=ID]       |Provide the id of a single module that should be migrated.
+-t, --types[=TYPES] | What module types should be migrated? [default: ["newsreader","newsreader_plus"]] (multiple values allowed)
+--dry-run           | Performs a run without writing to datebase and copy templates.
+
+
+
+### Content elements
+
+#### Convert Tabs to Tab Control Bundle
+
+Supported source modules:
+* contao-legacy/fry_accessible_tabs
+
+Usage: 
+```
+huh:migration:ce:tab_control_bundle [options]
+```
+
+Options:
+
+Option              | Description
+--------------------|-----
+-i, --id[=ID]       | Provide the id of a single content element that should be migrated.
+-t, --types[=TYPES] | What content element types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
+--dry-run           | Performs a run without writing to datebase and copy templates.
+
+Since: `0.3.0`
+
+
+
+### Others
+
+
+#### News Categories to Categories Bundle
 
 Migration of database entries from news_categories module to heimrichhannot/contao-categories.
 
@@ -41,7 +137,7 @@ Argument | Description
   field  | What is the name of the category field in tl_news (default: categories)? [default: "categories"]
 
 
-### Move modules to block
+#### Move modules to block
 
 Move given module into a block.
 
@@ -65,75 +161,3 @@ Option                 | Description
       --dry-run        | Preview command without changing the database.
   -t, --title=TITLE    | Set a block name for new blocks. If not set, name of first module will be used.
       --no-replace     | Don't replace modules with block.
-
-
-### Convert News Plus modules to Filter/List/Readerbundle modules
-
-Usage:
-```
-huh:migration:module:newsplus [options]
-```
-  
-Options:
-
-Option              | Description
---------------------|-----
---dry-run           | Performs a run without writing to datebase and copy templates.
--m, --module=MODULE | Convert a single module instead of all modules.
-
-
-### Convert News Plus reader modules to Filter/Readerbundle modules
-
-Migration of tl_module type:newsreader modules to huhreader and creates reader configurations from old tl_module settings.
-
-Usage:
-```
-migration:module:newsreader [options]
-```
-
-Options:
-
-Option              | Description
---------------------|-----
--i, --id[=ID]       |Provide the id of a single module that should be migrated.
--t, --types[=TYPES] | What module types should be migrated? [default: ["newsreader","newsreader_plus"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
-
-
-### Convert Owl Carousel News List to Filter/List modules
-
-Usage: 
-```
-huh:migration:module:owlcarousel [options]
-```
-
-Options:
-
-Option              | Description
---------------------|-----
--i, --id[=ID]       | Provide the id of a single module that should be migrated.
--t, --types[=TYPES] | What module types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
-
-Since: `0.2.0`
-
-
-### Convert Tabs to Tab Control Bundle
-
-Supported source modules:
-* contao-legacy/fry_accessible_tabs
-
-Usage: 
-```
-huh:migration:ce:tab_control_bundle [options]
-```
-
-Options:
-
-Option              | Description
---------------------|-----
--i, --id[=ID]       | Provide the id of a single content element that should be migrated.
--t, --types[=TYPES] | What content element types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
-
-Since: `0.3.0`

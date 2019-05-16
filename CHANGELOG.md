@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2019-05-15
+
+* [BC BREAK] `AbstractMigrationCommand::addUpgradeNotices()` expect a type name as first parameter
+* [BC BREAK] `MigrateNewsListItemTemplateToListTemplateTrait` were replaced by the more generic `MoveTemplateTrait`
+* AbstractModuleMigrationCommand now extends AbstractMigrationCommand
+* added news archive module migration command `huh:migration:module:newsmenu`
+
 ## [0.3.0] - 2019-05-14
 
 * added `AbstractMigrationCommand` class

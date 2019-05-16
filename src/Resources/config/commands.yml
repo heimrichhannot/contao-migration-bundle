@@ -4,5 +4,6 @@ services:
     autoconfigure: true
     public: false
 
+  HeimrichHannot\MigrationBundle\Command\NewsArchiveMenuToFilterMigrationCommand: ~
   HeimrichHannot\MigrationBundle\Command\OwlCarouselToTinySliderMigrationCommand: ~
   HeimrichHannot\MigrationBundle\Command\TabsToTabControleMigrationCommand: ~

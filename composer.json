@@ -11,7 +11,7 @@
   "suggest": {
     "heimrichhannot/contao-reader-bundle": "^1.0.0-beta45",
     "heimrichhannot/contao-list-bundle": "^1.0.0-beta46",
-    "heimrichhannot/contao-filter-bundle": "^1.0.0-beta31",
+    "heimrichhannot/contao-filter-bundle": "^1.0.0-beta96",
     "heimrichhannot/contao-blocks": "^1.5.2"
   },
   "config": {

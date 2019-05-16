@@ -10,6 +10,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 
 use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\Model;
 use Contao\Model\Collection;
 use Contao\ModuleModel;
 use Doctrine\DBAL\Query\QueryBuilder;

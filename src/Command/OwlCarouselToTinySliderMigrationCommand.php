@@ -16,7 +16,7 @@ use Contao\Model;
 use Contao\ModuleModel;
 use Contao\StringUtil;
 use HeimrichHannot\ListBundle\Module\ModuleList;
-use HeimrichHannot\MigrationBundle\Extensions\MigrateNewsListItemTemplateToListTemplateTrait;
+use HeimrichHannot\MigrationBundle\Extensions\MoveTemplateTrait;
 use HeimrichHannot\MigrationBundle\Extensions\NewsListToFilterTrait;
 use HeimrichHannot\MigrationBundle\Extensions\NewsListToListTrait;
 use HeimrichHannot\TinySliderBundle\DataContainer\TinySliderConfigContainer;
@@ -26,7 +26,7 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
 {
     use NewsListToFilterTrait;
     use NewsListToListTrait;
-    use MigrateNewsListItemTemplateToListTemplateTrait;
+    use MoveTemplateTrait;
 
     protected function configure()
     {
@@ -49,7 +49,7 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
         $listConfig = $listConfigData['config'];
         $sliderConfig = $this->createTinySliderConfig($module);
         $this->migrateFrontendModule($module, $listConfig->id);
-        $this->copyNewsItemTemplate($module, $listConfig);
+        $this->moveTemplate($module, 'news_template', $listConfig, 'itemTemplate');
 
         $listConfig->addTinySlider = "1";
         $listConfig->tinySliderConfig = $sliderConfig->id;
@@ -170,7 +170,7 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
             {
                 if (!empty($navText[0]) || !empty($navText[1]))
                 {
-                    $this->addUpgradeNotices("You need to manually adjust slider navigation buttons text for Tiny Slider config '".$configuration->title."' (ID: ".$configuration->id."): '".$navText[0]."'', '".$navText[1]."'");
+                    $this->addUpgradeNotices("module", "You need to manually adjust slider navigation buttons text for Tiny Slider config '".$configuration->title."' (ID: ".$configuration->id."): '".$navText[0]."'', '".$navText[1]."'");
                 }
             }
         }

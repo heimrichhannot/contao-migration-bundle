@@ -148,7 +148,14 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
         if ($this->hasUpgradeNotices())
         {
             $this->io->section("Migration Notices");
-            $this->io->listing($this->getUpgradeNotices());
+            foreach ($this->upgradeNotices as $type => $messages)
+            {
+                $this->io->text($type);
+                $this->io->listing($messages);
+            }
+
+
+
         }
 
         $this->io->success("Finished migration of ".$this->elements->count()." elements.");
@@ -251,6 +258,25 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
     }
 
     /**
+     * Save method already respecting dry run.
+     *
+     * @param Model $model
+     */
+    public function save(Model $model)
+    {
+        if (!$this->isDryRun())
+        {
+            $model->save();
+        }
+        else {
+            if (!$model->id)
+            {
+                $model->id = 0;
+            }
+        }
+    }
+
+    /**
      * Run custom migration on each element
      * @param Model $model
      * @return mixed
@@ -282,9 +308,13 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
     /**
      * @param string $upgradeNotice
      */
-    public function addUpgradeNotices(string $upgradeNotice): void
+    public function addUpgradeNotices(string $type, string $upgradeNotice): void
     {
-        $this->upgradeNotices[] = $upgradeNotice;
+        if (!isset($this->upgradeNotices[$type]))
+        {
+            $this->upgradeNotices[$type] = [];
+        }
+        $this->upgradeNotices[$type][] = $upgradeNotice;
     }
 
     public function hasUpgradeNotices(): bool

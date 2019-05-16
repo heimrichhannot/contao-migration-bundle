@@ -12,6 +12,7 @@
 namespace HeimrichHannot\MigrationBundle\Extensions;
 
 
+use Contao\Model;
 use Contao\ModuleModel;
 use Contao\StringUtil;
 use HeimrichHannot\ListBundle\Backend\ListConfig;
@@ -28,7 +29,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @method ContainerInterface getContainer
  * @method bool isDryRun
  * @method void addMigrationSql(string $sql)
- * @method void addUpgradeNotices(string $upgradeNotice)
+ * @method void addUpgradeNotices(string $type, string $upgradeNotice)
+ * @method void save(Model $model)
  *
  * @property SymfonyStyle $io
  */
