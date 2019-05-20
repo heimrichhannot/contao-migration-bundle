@@ -10,10 +10,8 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 
 use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
-use Contao\Model;
 use Contao\Model\Collection;
-use Contao\ModuleModel;
-use Doctrine\DBAL\Query\QueryBuilder;
+use Contao\ModuleModel;;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -32,11 +30,6 @@ abstract class AbstractModuleMigrationCommand extends AbstractMigrationCommand
      * @var Collection|ModuleModel[]|ModuleModel|null
      */
     protected $modules;
-
-    /**
-     * @var QueryBuilder
-     */
-    protected $queryBuilder;
 
     /**
      * @var InputInterface

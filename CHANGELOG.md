@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.5.0-DEV] - 2019-05-20
+
+* `MoveTemplateTrait` is now added comments about migration to the template and comments out existing PHP code
+* removed unused query builder from AbstractMigrationCommand and AbstractModuleMigrationCommand
+
 ## [0.4.0] - 2019-05-16
 
 * [BC BREAK] `AbstractMigrationCommand::addUpgradeNotices()` expect a type name as first parameter
