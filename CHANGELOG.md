@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 
 * `MoveTemplateTrait` is now added comments about migration to the template and comments out existing PHP code
 * removed unused query builder from AbstractMigrationCommand and AbstractModuleMigrationCommand
+* fixed initial year filter on NewsArchiveMenu migration
 
 ## [0.4.0] - 2019-05-16
 

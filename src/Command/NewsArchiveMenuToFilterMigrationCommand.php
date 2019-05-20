@@ -66,7 +66,7 @@ class NewsArchiveMenuToFilterMigrationCommand extends AbstractModuleMigrationCom
         $filter = $this->createNewsFilter($model);
         $filterConfig = $filter['config'];
         $this->buildYearFilterConfigElement($model, $filterConfig->id, 16);
-        $this->buildYearFilterConfigElement($model, $filterConfig->id, 32);
+        $this->buildInitalYearFilterConfigElement($model, $filterConfig->id, 32);
 
         $model->type = ModuleFilter::TYPE;
         $model->filter = $filterConfig->id;
