@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
+use Twig\Error\LoaderError;
 
 /**
  * Trait MigrateNewsListItemTemplateToListTemplateTrait
@@ -46,8 +47,8 @@ trait MoveTemplateTrait
             return 0;
         }
 
-
-        $targetModel->{$targetModelTemplateField} = $sourceModel->{$sourceModelTemplateField};
+        $targetFileName = $templatePrefix.$sourceModel->{$sourceModelTemplateField} . '.html.twig';
+        $targetModel->{$targetModelTemplateField} = $targetFileName;
         $this->save($targetModel);
 
         if (in_array($sourceModel->{$sourceModelTemplateField}, $this->processedTemplate))
@@ -61,7 +62,7 @@ trait MoveTemplateTrait
         $this->processedTemplate[] = $sourceModel->{$sourceModelTemplateField};
 
         try {
-            $templatePath     = Controller::getTemplate($sourceModel->{$sourceModelTemplateField});
+            $sourceTemplatePath     = Controller::getTemplate($sourceModel->{$sourceModelTemplateField});
         } catch (\Exception $e) {
             $message = 'Could not copy template: ' . $sourceModel->{$sourceModelTemplateField} . ', which file does not exist.';
             $this->addUpgradeNotices("template", $message);
@@ -70,19 +71,37 @@ trait MoveTemplateTrait
             }
             return 1;
         }
-        $targetFileName = $templatePrefix.$sourceModel->{$sourceModelTemplateField} . '.html.twig';
-        $twigTemplatePath = $this->getContainer()->get('huh.utils.container')->getProjectDir()
-            . DIRECTORY_SEPARATOR . 'templates'
-            . DIRECTORY_SEPARATOR . $targetFileName;
 
-        if (!file_exists($twigTemplatePath)) {
+        $templatePath = dirname($sourceTemplatePath);
+        $twigTemplatePath = $templatePath . DIRECTORY_SEPARATOR . $targetFileName;
 
+        try {
+            if ($existingTemplate = $this->getContainer()->get('huh.utils.template')->getTemplate($templatePrefix.$sourceModel->{$sourceModelTemplateField}, 'html.twig'))
+            {
+                if ($this->io->isVeryVerbose())
+                {
+                    $this->io->text("Template ".$targetFileName." does already exist. Skipping.");
+                }
+            }
+        } catch (LoaderError $e) {
+
+        }
+
+        if (!file_exists($twigTemplatePath))
+        {
+            $templateContent = file_get_contents($sourceTemplatePath);
             $fileSystem = new Filesystem();
             try {
-
                 if (!$this->isDryRun())
                 {
-                    $fileSystem->copy($templatePath, $twigTemplatePath);
+                    $fileSystem->dumpFile($twigTemplatePath,
+                        '<p>This template was migrated to twig by '.$this->getName().' command.
+                        Please adjust template. You will find it here:
+                        <i>'.$twigTemplatePath.'</i>
+                        The original php template content is added within a comment to this template.</p>
+                        {# '.$templateContent.' #}'
+                    );
+                    $fileSystem->copy($sourceTemplatePath, $twigTemplatePath);
                 }
                 $message = 'Created copy of existing template to <fg=green>' . $targetFileName . '</> template, please adjust the template to fit twig syntax in ' . $twigTemplatePath . '.';
                 $this->addUpgradeNotices("template", $message);
@@ -97,7 +116,7 @@ trait MoveTemplateTrait
                 }
                 return 1;
             } catch (IOException $e) {
-                $message = 'An error occurred while copy template from ' . $templatePath . ' to ' . $twigTemplatePath . '.';
+                $message = 'An error occurred while copy template from ' . $sourceTemplatePath . ' to ' . $twigTemplatePath . '.';
                 $this->addUpgradeNotices("template", "template", $message);
                 if ($this->io->isVerbose()) {
                     $this->io->text($message);
