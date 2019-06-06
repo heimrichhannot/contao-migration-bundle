@@ -51,6 +51,11 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
     protected $categoryAssociations;
 
     /**
+     * @var array
+     */
+    protected $categoryIdMapping;
+
+    /**
      * tl_news category field name
      * @var string
      */
@@ -115,19 +120,37 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
             return 0;
         }
 
-
         foreach ($newsCategories as $newsCategory) {
             $categoryModel = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new CategoryModel());
+
+            // unset the old ID since it may also be available in the target table
+            $legacyId = $newsCategory['id'];
+            unset($newsCategory['id']);
+
             $categoryModel->setRow($newsCategory);
-            $categoryModel->dateAdded = $newsCategory->tstamp;
+            $categoryModel->dateAdded = $newsCategory['tstamp'];
             $categoryModel->save();
 
             if ($categoryModel->id > 0) {
-                $this->output->writeln('<info>Successfully migrated category: "' . $categoryModel->title . '" (ID: ' . $categoryModel->id . ')</info>');
-                $this->categories[$newsCategory['id']] = $categoryModel;
+                $this->output->writeln('<info>Successfully migrated category: "' . $categoryModel->title . '" (Legacy-ID: ' . $legacyId . ')</info>');
+                $this->categories[$legacyId] = $categoryModel;
+
+                // store the id mapping
+                $this->categoryIdMapping[$legacyId] = $categoryModel->id;
             } else {
-                $this->output->writeln('<error>Error: Could not migrate category: "' . $categoryModel->title . '" (ID: ' . $categoryModel->id . ')</error>');
+                $this->output->writeln('<error>Error: Could not migrate category: "' . $categoryModel->title . '" (Legacy-ID: ' . $legacyId . ')</error>');
             }
+        }
+
+        // set the correct pid
+        foreach ($this->categoryIdMapping as $legacyId => $id) {
+            if (null === ($categoryModel = System::getContainer()->get('huh.utils.model')->findModelInstanceByPk('tl_category', $id)))
+            {
+                continue;
+            }
+
+            $categoryModel->pid = $this->categoryIdMapping[$categoryModel->pid];
+            $categoryModel->save();
         }
 
         return 1;
@@ -146,14 +169,14 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
 
         foreach ($newsCategoryRelations as $newsCategoryRelation) {
 
-            if (!isset($this->categories[$newsCategoryRelation['category_id']])) {
+            if (!isset($this->categories[$newsCategoryRelation['category_id']]) || !isset($this->categoryIdMapping[$newsCategoryRelation['category_id']])) {
                 $this->output->writeln('<error>Unable to migrate relation for news with ID:' . $newsCategoryRelation['news_id'] . ' and category ID:' . $newsCategoryRelation['category_id'] . ' because category does not exist.</error>');
                 continue;
             }
 
             $categoryAssociationModel                = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new CategoryAssociationModel());
             $categoryAssociationModel->tstamp        = time();
-            $categoryAssociationModel->category      = $newsCategoryRelation['category_id'];
+            $categoryAssociationModel->category      = $this->categoryIdMapping[$newsCategoryRelation['category_id']];
             $categoryAssociationModel->parentTable   = 'tl_news';
             $categoryAssociationModel->entity        = $newsCategoryRelation['news_id'];
             $categoryAssociationModel->categoryField = $this->field;
