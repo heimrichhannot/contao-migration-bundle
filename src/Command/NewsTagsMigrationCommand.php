@@ -9,11 +9,7 @@
 namespace HeimrichHannot\MigrationBundle\Command;
 
 
-use Codefog\TagsBundle\Manager\DefaultManager;
-use Codefog\TagsBundle\Tag;
 use Contao\CoreBundle\Command\AbstractLockedCommand;
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
-use Contao\System;
 use Doctrine\DBAL\Query\QueryBuilder;
 use HeimrichHannot\UtilsBundle\Driver\DC_Table_Utils;
 use Symfony\Component\Console\Input\InputArgument;
@@ -62,7 +58,7 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
      */
     protected function configure()
     {
-        $this->setName('huh:migration:news_tags')->setDescription(
+        $this->setName('huh:migration:db:news_tags')->setDescription(
             'Migration of database entries from tags module to codefog/tags-bundle.'
         );
 
