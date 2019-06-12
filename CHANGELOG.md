@@ -1,13 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [0.5.1] - 2019-06-12
-
-- [CHANGED] renamed `huh:migration:news_tags` to `huh:migration:db:news_tags` command
-
 ## [0.5.0] - 2019-06-12
 
-- [ADDED] `huh:migration:news_tags` command
+- [ADDED] `huh:migration:db:news_tags` command
 
 ## [0.4.1] - 2019-06-06
 
