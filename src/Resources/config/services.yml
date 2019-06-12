@@ -23,4 +23,6 @@ services:
   huh.migration.database.newscategories:
     class: HeimrichHannot\MigrationBundle\Command\NewsCategoriesMigrationCommand
     arguments: ['@contao.framework']
-
+  huh.migration.database.newstags:
+    class: HeimrichHannot\MigrationBundle\Command\NewsTagsMigrationCommand
+    arguments: ['@service_container']
