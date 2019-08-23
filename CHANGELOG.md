@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2019-08-23
+
+- `MoveTemplateTrait` is now added comments about migration to the template and comments out existing PHP code
+- removed unused query builder from AbstractMigrationCommand and AbstractModuleMigrationCommand
+- fixed initial year filter on NewsArchiveMenu migration
+- unset formHybridDataContainer field since it couses database errors
+
 ## [0.5.0] - 2019-06-12
 
 - [ADDED] `huh:migration:db:news_tags` command

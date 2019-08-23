@@ -459,6 +459,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             return null;
         }
 
+        $module->formHybridDataContainer = '';
         $module->tstamp       = time();
         $module->readerConfig = $readerConfig->id;
         $module->type         = ModuleReader::TYPE;
@@ -506,6 +507,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
 
         }
 
+        $module->formHybridDataContainer = '';
         $module->tstamp     = time();
         $module->type       = ModuleList::TYPE;
         $module->listConfig = $listConfig->id;
@@ -551,6 +553,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             }
         }
 
+        $module->formHybridDataContainer = '';
         $module->tstamp = time();
         $module->type   = ModuleFilter::TYPE;
         if (!$this->dryRun) {

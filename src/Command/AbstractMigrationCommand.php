@@ -16,7 +16,6 @@ use Contao\CoreBundle\Command\AbstractLockedCommand;
 use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
 use Contao\Model;
 use Contao\Model\Collection;
-use Doctrine\DBAL\Query\QueryBuilder;
 use stdClass;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -49,10 +48,6 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
      * @var bool
      */
     protected $dryRun = false;
-    /**
-     * @var QueryBuilder
-     */
-    protected $queryBuilder;
 
     public function __construct(ContaoFrameworkInterface $framework)
     {
@@ -113,8 +108,6 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
             $this->io->error('Migration could not be done, cause not all prerequisites are fulfilled!');
             return 1;
         }
-
-        $this->queryBuilder = new QueryBuilder($this->getContainer()->get('doctrine.dbal.default_connection'));
 
         $types = array_intersect(static::getTypes(), $input->getOption('types'));
 
