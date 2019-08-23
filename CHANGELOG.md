@@ -1,7 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [0.5.0-DEV] - 2019-05-20
+## [0.5.1] - 2019-08-23
+
+- unset formHybridDataContainer field since it couses database errors
+
+## [0.5.0] - 2019-05-20
 
 * `MoveTemplateTrait` is now added comments about migration to the template and comments out existing PHP code
 * removed unused query builder from AbstractMigrationCommand and AbstractModuleMigrationCommand
