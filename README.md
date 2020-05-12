@@ -127,14 +127,22 @@ Migration of database entries from news_categories module to heimrichhannot/cont
 
 Usage:
 ```
-huh:migration:db:news_categories [<field>]
+huh:migration:db:news_categories [<field>] [options]
 ```
 
 Arguments:
 
 Argument | Description
 ---------|------------
-  field  | What is the name of the category field in tl_news (default: categories)? [default: "categories"]
+ field | What is the name of the category field in tl_news? [default: "categories"]
+ 
+Options:
+
+Option                   | Description
+-------------------------|------------
+--category-ids           | Restrict the command to legacy news categories of certain IDs **and their children** [default: no restriction]
+--news-archive-ids       | Restrict the command to news of certain archives [default: no restriction]
+--primary-category-field | Pass in the name of the *source* field in tl_news holding the ID of the primary category.
 
 
 #### Move modules to block

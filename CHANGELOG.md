@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2020-05-12
+
+- added new options for `NewsCategoriesMigrationCommand`: 
+
 ## [0.6.0] - 2019-08-23
 
 - `MoveTemplateTrait` is now added comments about migration to the template and comments out existing PHP code
