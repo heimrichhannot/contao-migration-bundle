@@ -40,7 +40,7 @@ Option              | Description
 --------------------|-----
 -i, --id[=ID]       | Provide the id of a single modules that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["newsmenu"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
+--dry-run           | Performs a run without writing to database and copy templates.
 
 Since: `0.4.0`
 
@@ -57,7 +57,7 @@ Option              | Description
 --------------------|-----
 -i, --id[=ID]       | Provide the id of a single module that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
+--dry-run           | Performs a run without writing to database and copy templates.
 
 Since: `0.2.0`
 
@@ -72,7 +72,7 @@ Options:
 
 Option              | Description
 --------------------|-----
---dry-run           | Performs a run without writing to datebase and copy templates.
+--dry-run           | Performs a run without writing to database and copy templates.
 -m, --module=MODULE | Convert a single module instead of all modules.
 
 #### Convert News Plus reader modules to Filter/Readerbundle modules
@@ -88,9 +88,9 @@ Options:
 
 Option              | Description
 --------------------|-----
--i, --id[=ID]       |Provide the id of a single module that should be migrated.
+-i, --id[=ID]       | Provide the id of a single module that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["newsreader","newsreader_plus"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
+--dry-run           | Performs a run without writing to database and copy templates.
 
 
 
@@ -112,7 +112,7 @@ Option              | Description
 --------------------|-----
 -i, --id[=ID]       | Provide the id of a single content element that should be migrated.
 -t, --types[=TYPES] | What content element types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
---dry-run           | Performs a run without writing to datebase and copy templates.
+--dry-run           | Performs a run without writing to database and copy templates.
 
 Since: `0.3.0`
 

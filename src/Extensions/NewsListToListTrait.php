@@ -1,16 +1,12 @@
 <?php
-/**
- * Contao Open Source CMS
+
+/*
+ * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * Copyright (c) 2019 Heimrich & Hannot GmbH
- *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
-
 namespace HeimrichHannot\MigrationBundle\Extensions;
-
 
 use Contao\Model;
 use Contao\ModuleModel;
@@ -23,8 +19,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Trait NewsListToListTrait
- * @package HeimrichHannot\MigrationBundle\Extensions
+ * Trait NewsListToListTrait.
  *
  * @method ContainerInterface getContainer
  * @method bool isDryRun
@@ -37,23 +32,20 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 trait NewsListToListTrait
 {
     /**
-     * @param ModuleModel $module
-     * @param int $filterConfigId
      * @return array ['config' => ListConfigModel, 'configElements' => ListConfigElementModel[]]
      */
     protected function createListConfig(ModuleModel $module, int $filterConfigId): array
     {
         /** @var ListConfigModel $listConfig */
-        $listConfig                    = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ListConfigModel());
-        $listConfig->filter            = $filterConfigId;
-        $listConfig->tstamp            = $listConfig->dateAdded = time();
-        $listConfig->title             = $module->name;
-        $listConfig->numberOfItems     = $module->numberOfItems;
-        $listConfig->perPage           = $module->perPage;
-        $listConfig->skipFirst         = $module->skipFirst;
-        $listConfig->sortingField      = 'date';
-        $listConfig->sortingDirection  = ListConfig::SORTING_DIRECTION_DESC;
-
+        $listConfig = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new ListConfigModel());
+        $listConfig->filter = $filterConfigId;
+        $listConfig->tstamp = $listConfig->dateAdded = time();
+        $listConfig->title = $module->name;
+        $listConfig->numberOfItems = $module->numberOfItems;
+        $listConfig->perPage = $module->perPage;
+        $listConfig->skipFirst = $module->skipFirst;
+        $listConfig->sortingField = 'date';
+        $listConfig->sortingDirection = ListConfig::SORTING_DIRECTION_DESC;
 
 //        $listConfig->addDetails    = "1";
 //        $listConfig->item = 'news_default';
@@ -63,32 +55,30 @@ trait NewsListToListTrait
 //        }
 //        $listConfig->itemTemplate      = $module->news_template;
 
-
         if (!$this->isDryRun()) {
             $listConfig->save();
-        }
-        else {
+        } else {
             $listConfig->id = 0;
         }
 
-        $imageSizeListConfigElement =$this->addImageSizeListConfigElement($listConfig->id, $module->imgSize);
+        $imageSizeListConfigElement = $this->addImageSizeListConfigElement($listConfig->id, $module->imgSize);
 
         return [
             'config' => $listConfig,
             'configElements' => [
                 'imageSize' => $imageSizeListConfigElement,
-            ]
+            ],
         ];
     }
 
     protected function addImageSizeListConfigElement(int $listConfigId, ?string $imgSize = null)
     {
-        if (!$imgSize)
-        {
+        if (!$imgSize) {
             return null;
         }
 
         $imgSize = StringUtil::deserialize($imgSize);
+
         if (empty($imgSize[0]) || empty($imgSize[1]) || empty($imgSize[2])) {
             return null;
         }
@@ -104,8 +94,7 @@ trait NewsListToListTrait
 
         if (!$this->isDryRun()) {
             $listConfigElement->save();
-        }
-        else {
+        } else {
             $listConfigElement->id = 0;
         }
 

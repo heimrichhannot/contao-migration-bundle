@@ -1,13 +1,12 @@
 <?php
-/**
- * Copyright (c) 2018 Heimrich & Hannot GmbH
+
+/*
+ * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * @author Rico Kaltofen <r.kaltofen@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
 namespace HeimrichHannot\MigrationBundle\Command;
-
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
 use Doctrine\DBAL\Query\QueryBuilder;
@@ -20,7 +19,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class NewsTagsMigrationCommand extends AbstractLockedCommand
 {
-
     /**
      * @var QueryBuilder
      */
@@ -37,7 +35,8 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
     protected $output;
 
     /**
-     * tl_news category field name
+     * tl_news category field name.
+     *
      * @var string
      */
     protected $field;
@@ -51,7 +50,6 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
         parent::__construct();
         $this->container = $container;
     }
-
 
     /**
      * {@inheritdoc}
@@ -74,10 +72,10 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
     {
         $this->container->get('contao.framework')->initialize();
 
-        $this->field   = $input->getArgument('field');
-        $this->io      = new SymfonyStyle($input, $output);
-        $this->input   = $input;
-        $this->output  = $output;
+        $this->field = $input->getArgument('field');
+        $this->io = new SymfonyStyle($input, $output);
+        $this->input = $input;
+        $this->output = $output;
         $this->rootDir = $this->getContainer()->getParameter('kernel.project_dir');
 
         $this->queryBuilder = new QueryBuilder($this->getContainer()->get('doctrine.dbal.default_connection'));
@@ -85,9 +83,8 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
         return $this->migrateTags();
     }
 
-
     /**
-     * Migrate tl_tags
+     * Migrate tl_tags.
      */
     protected function migrateTags(): int
     {
@@ -99,11 +96,10 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
             return 0;
         }
 
-        $tstamp  = time();
+        $tstamp = time();
         $newsIds = [];
 
         foreach ($newsTags as $newsTag) {
-
             $tag = $this->findTagByName($newsTag['tag']);
 
             // 1st: create the tag if it not already exists
@@ -113,16 +109,16 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
                 $this->queryBuilder->insert('tl_cfg_tag')->values(['tstamp' => ':tstamp', 'name' => ':name', 'source' => ':source'])->execute();
             }
 
-
             if (false === ($tag = $this->findTagByName($newsTag['tag']))) {
-                $this->output->writeln('<error>Error: Could not create news tag with name: "' . $newsTag['tag'] . '"</error>');
+                $this->output->writeln('<error>Error: Could not create news tag with name: "'.$newsTag['tag'].'"</error>');
+
                 continue;
             }
 
             // 2nd: create an unique alias
             if (empty($tag['alias'])) {
-                $dc               = new DC_Table_Utils('tl_cfg_tag');
-                $dc->activeRecord = (object)$tag;
+                $dc = new DC_Table_Utils('tl_cfg_tag');
+                $dc->activeRecord = (object) $tag;
 
                 $this->queryBuilder->setParameters(['alias' => $this->container->get('codefog_tags.listener.data_container.tag')->generateAlias('', $dc), 'id' => $tag['id']]);
                 $this->queryBuilder->update('tl_cfg_tag')->set('alias', ':alias')->where($this->queryBuilder->expr()->eq('id', ':id'))->execute();
@@ -133,7 +129,6 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
             $this->queryBuilder->setParameters(['news_id' => $newsTag['tid'], 'tag_id' => $tag['id']]);
             $this->queryBuilder->delete('tl_news_tags')->where($this->queryBuilder->expr()->eq('news_id', ':news_id'))->andWhere($this->queryBuilder->expr()->eq('cfg_tag_id', ':tag_id'))->execute();
 
-
             // 4th: create news / news tag relations
             $this->queryBuilder->resetQueryParts();
             $this->queryBuilder->setParameters(['news_id' => $newsTag['tid'], 'tag_id' => $tag['id']]);
@@ -143,28 +138,29 @@ class NewsTagsMigrationCommand extends AbstractLockedCommand
             }
         }
 
-        foreach ($newsIds as $id => $tags)
-        {
-            $this->queryBuilder->setParameters(['id' => $id, 'tags' => \serialize($tags)]);
+        foreach ($newsIds as $id => $tags) {
+            $this->queryBuilder->setParameters(['id' => $id, 'tags' => serialize($tags)]);
 
-            if($this->queryBuilder->update('tl_news')->set('tags', ':tags')->where($this->queryBuilder->expr()->eq('id', ':id'))->execute()){
-                $this->output->writeln('<info>Successfully migrated tags for news with id: "' . $id . '"</info>');
+            if ($this->queryBuilder->update('tl_news')->set('tags', ':tags')->where($this->queryBuilder->expr()->eq('id', ':id'))->execute()) {
+                $this->output->writeln('<info>Successfully migrated tags for news with id: "'.$id.'"</info>');
             }
         }
 
         return 1;
     }
 
-
     /**
-     * Find a news tag from tl_cfg_tag by a given name
+     * Find a news tag from tl_cfg_tag by a given name.
+     *
      * @param $name
+     *
      * @return mixed
      */
     protected function findTagByName($name)
     {
         $this->queryBuilder->resetQueryParts();
         $this->queryBuilder->setParameters(['name' => $name, 'source' => 'app.news']);
+
         return $this->queryBuilder->select('*')->from('tl_cfg_tag')->where($this->queryBuilder->expr()->eq('name', ':name'))->andWhere($this->queryBuilder->expr()->eq('source', ':source'))->setMaxResults(1)->execute()->fetch();
     }
 }

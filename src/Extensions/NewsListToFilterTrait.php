@@ -1,16 +1,12 @@
 <?php
-/**
- * Contao Open Source CMS
+
+/*
+ * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * Copyright (c) 2019 Heimrich & Hannot GmbH
- *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
-
 namespace HeimrichHannot\MigrationBundle\Extensions;
-
 
 use Contao\Model;
 use Contao\ModuleModel;
@@ -25,8 +21,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Trait NewsListToFilterTrait
- * @package HeimrichHannot\MigrationBundle\Extensions
+ * Trait NewsListToFilterTrait.
  *
  * @method ContainerInterface getContainer
  * @method bool isDryRun
@@ -39,7 +34,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 trait NewsListToFilterTrait
 {
     /**
-     * @param ModuleModel $module
      * @return array ['config' => FilterConfigModel, 'configElements' => FilterConfigElementModel[]]
      */
     public function createNewsFilter(ModuleModel $module)
@@ -56,125 +50,123 @@ trait NewsListToFilterTrait
                 'parent' => $parentFilterConfigElement,
                 'published' => $publishedFilterConfigElement,
                 'featured' => $featuredFilterConfigElement,
-            ]
+            ],
         ];
     }
 
     /**
-     * Build a filter model out of module
+     * Build a filter model out of module.
      *
-     * @param ModuleModel $module
      * @return FilterConfigModel
      */
     protected function buildNewsFilter(ModuleModel $module)
     {
-        $filterConfig                = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
-        $filterConfig->tstamp        = $filterConfig->dateAdded = time();
-        $filterConfig->title         = $module->name;
-        $filterConfig->name          = preg_replace(['/ä/i', '/ö/i', '/ü/i', '/ß/i'], ['ae', 'oe', 'ue', 'ss'], StringUtil::generateAlias($module->name));
+        $filterConfig = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigModel());
+        $filterConfig->tstamp = $filterConfig->dateAdded = time();
+        $filterConfig->title = $module->name;
+        $filterConfig->name = preg_replace(['/ä/i', '/ö/i', '/ü/i', '/ß/i'], ['ae', 'oe', 'ue', 'ss'], StringUtil::generateAlias($module->name));
         $filterConfig->dataContainer = 'tl_news';
-        $filterConfig->method        = 'GET';
-        $filterConfig->template      = 'form_div_layout';
-        $filterConfig->published     = 1;
+        $filterConfig->method = 'GET';
+        $filterConfig->template = 'form_div_layout';
+        $filterConfig->published = 1;
+
         if (!$this->isDryRun()) {
             $filterConfig->save();
-        }
-        else {
+        } else {
             $filterConfig->id = 0;
         }
+
         return $filterConfig;
     }
 
     /**
-     * @param int $filterId
-     * @param int $sorting
-     * @param array $pids
      * @return FilterConfigElementModel|null
      */
     protected function buildNewsParentFilterConfigElement(int $filterId, int $sorting, array $pids)
     {
-        if (empty($pids))
-        {
+        if (empty($pids)) {
             return null;
         }
 
         $initialValueArray = [];
-        foreach ($pids as $pid)
-        {
+
+        foreach ($pids as $pid) {
             $initialValueArray[] = ['value' => $pid];
         }
 
-        $filterElement                    = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->pid               = $filterId;
-        $filterElement->tstamp            = time();
-        $filterElement->dateAdded         = time();
-        $filterElement->sorting           = $sorting;
-        $filterElement->title             = 'News Archives';
-        $filterElement->type              = ParentType::TYPE;
-        $filterElement->isInitial         = 1;
-        $filterElement->field             = 'pid';
-        $filterElement->operator          = DatabaseUtil::OPERATOR_IN;
-        $filterElement->initialValueType  = 'array';
+        $filterElement = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
+        $filterElement->pid = $filterId;
+        $filterElement->tstamp = time();
+        $filterElement->dateAdded = time();
+        $filterElement->sorting = $sorting;
+        $filterElement->title = 'News Archives';
+        $filterElement->type = ParentType::TYPE;
+        $filterElement->isInitial = 1;
+        $filterElement->field = 'pid';
+        $filterElement->operator = DatabaseUtil::OPERATOR_IN;
+        $filterElement->initialValueType = 'array';
         $filterElement->initialValueArray = serialize($initialValueArray);
-        $filterElement->published         = 1;
+        $filterElement->published = 1;
+
         if (!$this->isDryRun()) {
             $filterElement->save();
         }
+
         return $filterElement;
     }
 
     protected function buildNewsPublishedFilterConfigElement(int $filterId, $sorting)
     {
-        $filterElement                  = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->pid             = $filterId;
-        $filterElement->tstamp          = time();
-        $filterElement->dateAdded       = time();
-        $filterElement->sorting         = $sorting;
-        $filterElement->title           = 'Published';
-        $filterElement->type            = PublishedType::TYPE;
-        $filterElement->field           = 'published';
+        $filterElement = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
+        $filterElement->pid = $filterId;
+        $filterElement->tstamp = time();
+        $filterElement->dateAdded = time();
+        $filterElement->sorting = $sorting;
+        $filterElement->title = 'Published';
+        $filterElement->type = PublishedType::TYPE;
+        $filterElement->field = 'published';
         $filterElement->addStartAndStop = 1;
-        $filterElement->startField      = 'start';
-        $filterElement->stopField       = 'stop';
-        $filterElement->published       = 1;
+        $filterElement->startField = 'start';
+        $filterElement->stopField = 'stop';
+        $filterElement->published = 1;
+
         if (!$this->isDryRun()) {
             $filterElement->save();
         }
+
         return $filterElement;
     }
 
     protected function buildNewsFeaturesFilterConfigElement(int $filterId, $sorting, ?string $featured = null)
     {
-        if (!$featured || $featured === 'all_items' || !in_array($featured, ['featured','unfeatured'])) {
+        if (!$featured || 'all_items' === $featured || !\in_array($featured, ['featured', 'unfeatured'])) {
             return null;
         }
 
-        $filterElement                  = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
-        $filterElement->title           = 'Favorites';
-        $filterElement->type            = 'checkbox';
-        $filterElement->isInitial       = '1';
-        $filterElement->sorting         = $sorting;
-        $filterElement->pid             = $filterId;
-        $filterElement->tstamp          = time();
-        $filterElement->dateAdded       = time();
-        $filterElement->published       = 1;
+        $filterElement = $this->getContainer()->get('huh.utils.model')->setDefaultsFromDca(new FilterConfigElementModel());
+        $filterElement->title = 'Favorites';
+        $filterElement->type = 'checkbox';
+        $filterElement->isInitial = '1';
+        $filterElement->sorting = $sorting;
+        $filterElement->pid = $filterId;
+        $filterElement->tstamp = time();
+        $filterElement->dateAdded = time();
+        $filterElement->published = 1;
 
-        $filterElement->field           = 'featured';
+        $filterElement->field = 'featured';
 
-        if ($featured === 'featured'){
+        if ('featured' === $featured) {
             $filterElement->operator = DatabaseUtil::OPERATOR_LIKE;
-
         } else {
             $filterElement->operator = DatabaseUtil::OPERATOR_IS_EMPTY;
         }
         $filterElement->initialValueType = AbstractType::VALUE_TYPE_SCALAR;
-        $filterElement->initialValue = "1";
+        $filterElement->initialValue = '1';
 
         if (!$this->isDryRun()) {
             $filterElement->save();
         }
+
         return $filterElement;
     }
-
-
 }

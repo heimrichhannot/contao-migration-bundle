@@ -1,19 +1,21 @@
 <?php
 
-namespace HeimrichHannot\MigrationBundle\Command;
+/*
+ * Copyright (c) 2020 Heimrich & Hannot GmbH
+ *
+ * @license LGPL-3.0-or-later
+ */
 
+namespace HeimrichHannot\MigrationBundle\Command;
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
 use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
-use Contao\CoreBundle\Framework\FrameworkAwareInterface;
-use Contao\CoreBundle\Framework\FrameworkAwareTrait;
 use Contao\Database;
 use Contao\System;
 use Doctrine\DBAL\Query\QueryBuilder;
 use HeimrichHannot\CategoriesBundle\Model\CategoryAssociationModel;
 use HeimrichHannot\CategoriesBundle\Model\CategoryModel;
 use HeimrichHannot\UtilsBundle\Database\DatabaseUtil;
-use HeimrichHannot\UtilsBundle\Model\ModelUtil;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -48,7 +50,8 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
     protected $categoryIdMapping;
 
     /**
-     * tl_news category field name
+     * tl_news category field name.
+     *
      * @var string
      */
     protected $field;
@@ -80,10 +83,9 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
     public function __construct(ContaoFrameworkInterface $framework, DatabaseUtil $databaseUtil)
     {
         parent::__construct();
-        $this->framework    = $framework;
+        $this->framework = $framework;
         $this->databaseUtil = $databaseUtil;
     }
-
 
     /**
      * {@inheritdoc}
@@ -109,14 +111,14 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
     {
         $this->framework->initialize();
 
-        $this->field                = $input->getArgument('field');
-        $this->categoryIds          = explode(',', $input->getOption('category-ids'));
-        $this->newsArchiveIds       = explode(',', $input->getOption('news-archive-ids'));
+        $this->field = $input->getArgument('field');
+        $this->categoryIds = explode(',', $input->getOption('category-ids'));
+        $this->newsArchiveIds = explode(',', $input->getOption('news-archive-ids'));
         $this->primaryCategoryField = $input->getOption('primary-category-field');
 
-        $this->io      = new SymfonyStyle($input, $output);
-        $this->input   = $input;
-        $this->output  = $output;
+        $this->io = new SymfonyStyle($input, $output);
+        $this->input = $input;
+        $this->output = $output;
         $this->rootDir = $this->getContainer()->getParameter('kernel.project_dir');
 
         if ($this->migrateCategories()) {
@@ -126,9 +128,8 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
         return 0;
     }
 
-
     /**
-     * Migrate tl_news_category to tl_category
+     * Migrate tl_news_category to tl_category.
      */
     protected function migrateCategories(): int
     {
@@ -163,13 +164,13 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
             $categoryModel->save();
 
             if ($categoryModel->id > 0) {
-                $this->output->writeln('<info>Successfully migrated category: "' . $categoryModel->title . '" (Legacy-ID: ' . $legacyId . ')</info>');
+                $this->output->writeln('<info>Successfully migrated category: "'.$categoryModel->title.'" (Legacy-ID: '.$legacyId.')</info>');
                 $this->categories[$legacyId] = $categoryModel;
 
                 // store the id mapping
                 $this->categoryIdMapping[$legacyId] = $categoryModel->id;
             } else {
-                $this->output->writeln('<error>Error: Could not migrate category: "' . $categoryModel->title . '" (Legacy-ID: ' . $legacyId . ')</error>');
+                $this->output->writeln('<error>Error: Could not migrate category: "'.$categoryModel->title.'" (Legacy-ID: '.$legacyId.')</error>');
             }
         }
 
@@ -192,7 +193,7 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
     }
 
     /**
-     * Migrate tl_news_categories to tl_category_association
+     * Migrate tl_news_categories to tl_category_association.
      */
     protected function migrateAssociations(): int
     {
@@ -213,7 +214,7 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
             // retrieve news ids from the archives
             $newsIds = [];
 
-            if (null !== ($news = $this->databaseUtil->findResultsBy('tl_news', ['tl_news.pid IN (' . implode(',', $this->newsArchiveIds) . ')'], [])) &&
+            if (null !== ($news = $this->databaseUtil->findResultsBy('tl_news', ['tl_news.pid IN ('.implode(',', $this->newsArchiveIds).')'], [])) &&
                 $news->numRows > 0) {
                 $newsIds = $news->fetchEach('id');
             }
@@ -229,36 +230,36 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
         }
 
         foreach ($newsCategoryRelations as $newsCategoryRelation) {
-
             if (!isset($this->categories[$newsCategoryRelation['category_id']]) || !isset($this->categoryIdMapping[$newsCategoryRelation['category_id']])) {
-                $this->output->writeln('<error>Unable to migrate relation for news with ID:' . $newsCategoryRelation['news_id'] . ' and category ID:' . $newsCategoryRelation['category_id'] . ' because category does not exist.</error>');
+                $this->output->writeln('<error>Unable to migrate relation for news with ID:'.$newsCategoryRelation['news_id'].' and category ID:'.$newsCategoryRelation['category_id'].' because category does not exist.</error>');
+
                 continue;
             }
 
-            $categoryAssociationModel                = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new CategoryAssociationModel());
-            $categoryAssociationModel->tstamp        = time();
-            $categoryAssociationModel->category      = $this->categoryIdMapping[$newsCategoryRelation['category_id']];
-            $categoryAssociationModel->parentTable   = 'tl_news';
-            $categoryAssociationModel->entity        = $newsCategoryRelation['news_id'];
+            $categoryAssociationModel = System::getContainer()->get('huh.utils.model')->setDefaultsFromDca(new CategoryAssociationModel());
+            $categoryAssociationModel->tstamp = time();
+            $categoryAssociationModel->category = $this->categoryIdMapping[$newsCategoryRelation['category_id']];
+            $categoryAssociationModel->parentTable = 'tl_news';
+            $categoryAssociationModel->entity = $newsCategoryRelation['news_id'];
             $categoryAssociationModel->categoryField = $this->field;
             $categoryAssociationModel->save();
 
             if ($categoryAssociationModel->id > 0) {
-                $this->output->writeln('<info>Successfully migrated category relation for field "' . $this->field . '" : "(news ID:' . $newsCategoryRelation['news_id'] . ')' . $this->categories[$newsCategoryRelation['category_id']]->title . '" (ID: ' . $categoryAssociationModel->category . ')</info>');
+                $this->output->writeln('<info>Successfully migrated category relation for field "'.$this->field.'" : "(news ID:'.$newsCategoryRelation['news_id'].')'.$this->categories[$newsCategoryRelation['category_id']]->title.'" (ID: '.$categoryAssociationModel->category.')</info>');
                 $this->categoryAssociations[] = $categoryAssociationModel;
             } else {
-                $this->output->writeln('<error>Error: Could not migrate category relation for field "' . $this->field . '" : "(news ID:' . $newsCategoryRelation['news_id'] . ')' . $this->categories[$newsCategoryRelation['category_id']]->title . '" (ID: ' . $categoryAssociationModel->category . ')</error>');
+                $this->output->writeln('<error>Error: Could not migrate category relation for field "'.$this->field.'" : "(news ID:'.$newsCategoryRelation['news_id'].')'.$this->categories[$newsCategoryRelation['category_id']]->title.'" (ID: '.$categoryAssociationModel->category.')</error>');
             }
         }
 
         // set the primary category in the news
         if ($this->primaryCategoryField) {
             $newsIds = [];
-            $targetField = $this->field . '_primary';
+            $targetField = $this->field.'_primary';
 
             if (!empty($this->newsArchiveIds)) {
                 // retrieve news ids from the archives
-                if (null !== ($news = $this->databaseUtil->findResultsBy('tl_news', ['tl_news.pid IN (' . implode(',', $this->newsArchiveIds) . ')'], [])) &&
+                if (null !== ($news = $this->databaseUtil->findResultsBy('tl_news', ['tl_news.pid IN ('.implode(',', $this->newsArchiveIds).')'], [])) &&
                     $news->numRows > 0) {
                     $newsIds = $news->fetchEach('id');
 
@@ -268,7 +269,7 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
                 }
             }
 
-            $columns = empty($newsIds) ? [] : ['tl_news.id IN (' . implode(',', $newsIds) . ')'];
+            $columns = empty($newsIds) ? [] : ['tl_news.id IN ('.implode(',', $newsIds).')'];
 
             if (null !== ($news = $this->databaseUtil->findResultsBy('tl_news', $columns, [])) && $news->numRows > 0) {
                 while ($news->next()) {
@@ -277,10 +278,10 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
                     }
 
                     $this->databaseUtil->update('tl_news', [
-                        $targetField => $this->categoryIdMapping[$news->{$this->primaryCategoryField}]
-                    ], "tl_news.id=?", [$news->id]);
+                        $targetField => $this->categoryIdMapping[$news->{$this->primaryCategoryField}],
+                    ], 'tl_news.id=?', [$news->id]);
 
-                    $this->output->writeln('<info>Successfully migrated primary category from field "' . $this->primaryCategoryField . '" to field "' . $targetField . '": "(news ID:' . $news->id . ')</info>');
+                    $this->output->writeln('<info>Successfully migrated primary category from field "'.$this->primaryCategoryField.'" to field "'.$targetField.'": "(news ID:'.$news->id.')</info>');
                 }
             }
         }

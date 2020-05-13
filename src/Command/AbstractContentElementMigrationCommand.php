@@ -1,25 +1,21 @@
 <?php
-/**
- * Contao Open Source CMS
- *
- * Copyright (c) 2019 Heimrich & Hannot GmbH
- *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
- */
 
+/*
+ * Copyright (c) 2020 Heimrich & Hannot GmbH
+ *
+ * @license LGPL-3.0-or-later
+ */
 
 namespace HeimrichHannot\MigrationBundle\Command;
 
-
 abstract class AbstractContentElementMigrationCommand extends AbstractMigrationCommand
 {
-    static function getTable(): string
+    public static function getTable(): string
     {
         return 'tl_content';
     }
 
-    static function getElementName(): string
+    public static function getElementName(): string
     {
         return 'content element';
     }

@@ -1,9 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2020-05-13
+
+- fixed syndication support in `NewsReaderModuleMigrationCommand`
+- added php codestyle fixer config
+
 ## [0.7.0] - 2020-05-12
 
-- added new options for `NewsCategoriesMigrationCommand`: 
+- added new options for `NewsCategoriesMigrationCommand` 
 
 ## [0.6.0] - 2019-08-23
 

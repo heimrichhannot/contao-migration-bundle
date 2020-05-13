@@ -1,16 +1,12 @@
 <?php
-/**
- * Contao Open Source CMS
+
+/*
+ * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * Copyright (c) 2019 Heimrich & Hannot GmbH
- *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
-
 namespace HeimrichHannot\MigrationBundle\Command;
-
 
 use Contao\Model;
 use Contao\ModuleModel;
@@ -28,17 +24,24 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
     use NewsListToListTrait;
     use MoveTemplateTrait;
 
+    public static function getTypes(): array
+    {
+        return ['owl_newslist'];
+    }
+
     protected function configure()
     {
-        $this->setName("huh:migration:module:owlcarousel")
-            ->setDescription("Migrate owl carousel to tiny slider.")
+        $this->setName('huh:migration:module:owlcarousel')
+            ->setDescription('Migrate owl carousel to tiny slider.')
         ;
         parent::configure();
     }
 
     /**
-     * Run custom migration on each module
+     * Run custom migration on each module.
+     *
      * @param ModuleModel|Model $module
+     *
      * @return mixed
      */
     protected function migrate(Model $module): int
@@ -51,10 +54,10 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
         $this->migrateFrontendModule($module, $listConfig->id);
         $this->moveTemplate($module, 'news_template', $listConfig, 'itemTemplate');
 
-        $listConfig->addTinySlider = "1";
+        $listConfig->addTinySlider = '1';
         $listConfig->tinySliderConfig = $sliderConfig->id;
-        if (!$this->isDryRun())
-        {
+
+        if (!$this->isDryRun()) {
             $listConfig->save();
         }
 
@@ -64,25 +67,22 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
     }
 
     /**
-     * @param ModuleModel $module
-     * @param int $listConfigId
      * @return ModuleModel
      */
     protected function migrateFrontendModule(ModuleModel $module, int $listConfigId)
     {
-        $module->tstamp     = time();
-        $module->type       = ModuleList::TYPE;
+        $module->tstamp = time();
+        $module->type = ModuleList::TYPE;
         $module->listConfig = $listConfigId;
+
         if (!$this->isDryRun()) {
             $module->save();
         }
 
-        $this->addMigrationSql("UPDATE tl_module SET type='".$module->type."', listConfig=".$module->listConfig." WHERE id=".$module->id.";");
+        $this->addMigrationSql("UPDATE tl_module SET type='".$module->type."', listConfig=".$module->listConfig.' WHERE id='.$module->id.';');
 
         return $module;
     }
-
-
 
     protected function createTinySliderConfig(ModuleModel $module): TinySliderConfigModel
     {
@@ -92,27 +92,27 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
         $configuration->title = $module->name;
         $configuration->type = TinySliderConfigContainer::TYPE_BASE;
         $mapping = [
-            'items'              => 'items',
-            'margin'             => 'gutter',
-            'loop'               => 'loop',
-            'mouseDrag'          => 'mouseDrag',
-            'touchDrag'          => 'touch',
-            'stagePadding'       => 'edgePadding',
-            'autoHeight'         => 'autoHeight',
-            'autoWidth'          => 'autoWidth',
-            'nav'                => 'controls',
-            'navRewind'          => 'rewind',
-            'slideBy'            => 'slideBy',
-            'dots'               => 'nav',
-            'lazyload'           => 'lazyload',
-            'autoplay'           => 'autoplay',
-            'autoplayTimeout'    => 'autoplayTimeout',
+            'items' => 'items',
+            'margin' => 'gutter',
+            'loop' => 'loop',
+            'mouseDrag' => 'mouseDrag',
+            'touchDrag' => 'touch',
+            'stagePadding' => 'edgePadding',
+            'autoHeight' => 'autoHeight',
+            'autoWidth' => 'autoWidth',
+            'nav' => 'controls',
+            'navRewind' => 'rewind',
+            'slideBy' => 'slideBy',
+            'dots' => 'nav',
+            'lazyload' => 'lazyload',
+            'autoplay' => 'autoplay',
+            'autoplayTimeout' => 'autoplayTimeout',
             'autoplayHoverPause' => 'autoplayHoverPause',
-            'animateIn'          => 'animateIn',
-            'animateOut'         => 'animateOut',
-            'startPosition'      => [
+            'animateIn' => 'animateIn',
+            'animateOut' => 'animateOut',
+            'startPosition' => [
                 'key' => 'startIndex',
-                'callable' => function($oldValue) { return is_numeric($oldValue) ? (intval($oldValue) >= 0 ?: 0) : 0; }
+                'callable' => function ($oldValue) { return is_numeric($oldValue) ? ((int) $oldValue >= 0 ?: 0) : 0; },
             ],
         ];
 
@@ -120,13 +120,11 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
 
         $responsiveConfig = StringUtil::deserialize($module->owl_responsive);
 
-        if (is_array($responsiveConfig))
-        {
+        if (\is_array($responsiveConfig)) {
             $breakpoints = [];
-            foreach ($responsiveConfig as $config)
-            {
-                if (!isset($config['owl_breakpoint']) || $config['owl_breakpoint'] === "" || !isset($config['owl_config']) || empty($config['owl_config']))
-                {
+
+            foreach ($responsiveConfig as $config) {
+                if (!isset($config['owl_breakpoint']) || '' === $config['owl_breakpoint'] || !isset($config['owl_config']) || empty($config['owl_config'])) {
                     continue;
                 }
                 reset($mapping);
@@ -135,48 +133,43 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
                 $breakpointConfiguration = $configuration->cloneOriginal();
                 $breakpointConfiguration->title = $module->name.' - mobile ('.$config['owl_breakpoint'].'px)';
                 $breakpointConfiguration->type = TinySliderConfigContainer::TYPE_RESPONSIVE;
-                $breakpointConfig = explode(",", $config['owl_config']);
+                $breakpointConfig = explode(',', $config['owl_config']);
                 $breakpointConfig = array_map('trim', $breakpointConfig);
+
                 if (empty($breakpointConfig)) {
                     continue;
                 }
                 $this->map((object) $breakpointConfig, $breakpointConfiguration, $mapping, 'owl_', 'tinySlider_');
-                if (!$this->isDryRun())
-                {
+
+                if (!$this->isDryRun()) {
                     //$breakpointConfiguration->save();
                 }
                 $breakpoint['configuration'] = $breakpointConfiguration->id;
                 $breakpoints[] = $breakpoint;
             }
-            if (!empty($breakpoints))
-            {
+
+            if (!empty($breakpoints)) {
                 $configuration->tinySlider_responsive = serialize($breakpoints);
             }
         }
 
-        if (!$this->isDryRun())
-        {
+        if (!$this->isDryRun()) {
             $configuration->save();
-        }
-        else {
+        } else {
             $configuration->id = 0;
         }
 
-        if ($module->owl_navText)
-        {
+        if ($module->owl_navText) {
             $navText = StringUtil::deserialize($module->owl_navText);
 
-            if (is_array($navText) && isset($navText[0]) && isset($navText[1]))
-            {
-                if (!empty($navText[0]) || !empty($navText[1]))
-                {
-                    $this->addUpgradeNotices("module", "You need to manually adjust slider navigation buttons text for Tiny Slider config '".$configuration->title."' (ID: ".$configuration->id."): '".$navText[0]."'', '".$navText[1]."'");
+            if (\is_array($navText) && isset($navText[0]) && isset($navText[1])) {
+                if (!empty($navText[0]) || !empty($navText[1])) {
+                    $this->addUpgradeNotices('module', "You need to manually adjust slider navigation buttons text for Tiny Slider config '".$configuration->title."' (ID: ".$configuration->id."): '".$navText[0]."'', '".$navText[1]."'");
                 }
             }
         }
 
         return $configuration;
-
 
 //        $a = 'owl_center,
 //            owl_pullDrag,owl_freeDrag,
@@ -192,19 +185,10 @@ class OwlCarouselToTinySliderMigrationCommand extends AbstractModuleMigrationCom
 //            owl_rtl';
     }
 
-
-
-    static function getTypes(): array
-    {
-        return ['owl_newslist'];
-    }
-
     /**
      * This method is used to check, if migration command could be execute.
      * This is the place to check if a needed bundle is installed or database fields exist.
      * Return false, to stop the migration command.
-     *
-     * @return bool
      */
     protected function beforeMigrationCheck(): bool
     {
