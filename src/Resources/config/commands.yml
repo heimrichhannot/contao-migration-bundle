@@ -8,3 +8,6 @@ services:
   HeimrichHannot\MigrationBundle\Command\NewsArchiveMenuToFilterMigrationCommand: ~
   HeimrichHannot\MigrationBundle\Command\OwlCarouselToTinySliderMigrationCommand: ~
   HeimrichHannot\MigrationBundle\Command\TabsToTabControleMigrationCommand: ~
+  HeimrichHannot\MigrationBundle\Command\NewsTagsMigrationCommand: ~
+  HeimrichHannot\MigrationBundle\Command\NewsListModuleMigrationCommand: ~
+  HeimrichHannot\MigrationBundle\Command\NewsReaderModuleMigrationCommand: ~

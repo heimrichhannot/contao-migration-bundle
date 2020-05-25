@@ -46,14 +46,14 @@ trait NewsListToListTrait
         $listConfig->skipFirst = $module->skipFirst;
         $listConfig->sortingField = 'date';
         $listConfig->sortingDirection = ListConfig::SORTING_DIRECTION_DESC;
+        $listConfig->limitFormattedFields = true;
+        $listConfig->useAlias = true;
+        $listConfig->aliasField = 'alias';
 
-//        $listConfig->addDetails    = "1";
-//        $listConfig->item = 'news_default';
-//        if ($module->news_jumpToCurrent)
-//        {
-//            $listConfig->jumpToDetails = $module->news_jumpToCurrent;
-//        }
-//        $listConfig->itemTemplate      = $module->news_template;
+        if ($module->jumpToDetails) {
+            $listConfig->addDetails = true;
+            $listConfig->jumpToDetails = $module->jumpToDetails;
+        }
 
         if (!$this->isDryRun()) {
             $listConfig->save();
@@ -63,11 +63,19 @@ trait NewsListToListTrait
 
         $imageSizeListConfigElement = $this->addImageSizeListConfigElement($listConfig->id, $module->imgSize);
 
+        $configElements = [
+            'imageSize' => $imageSizeListConfigElement,
+        ];
+
+        // category filter
+
+
+        // news related
+        // related_numberOfItems, related_match (array mit "tags", "categories"), image config element -> create new list config and link to list config element
+
         return [
             'config' => $listConfig,
-            'configElements' => [
-                'imageSize' => $imageSizeListConfigElement,
-            ],
+            'configElements' => $configElements
         ];
     }
 
@@ -79,7 +87,7 @@ trait NewsListToListTrait
 
         $imgSize = StringUtil::deserialize($imgSize);
 
-        if (empty($imgSize[0]) || empty($imgSize[1]) || empty($imgSize[2])) {
+        if (empty(array_filter($imgSize))) {
             return null;
         }
 
@@ -90,7 +98,7 @@ trait NewsListToListTrait
         $listConfigElement->title = 'News Image';
         $listConfigElement->imageSelectorField = 'addImage';
         $listConfigElement->imageField = 'singleSRC';
-        $listConfigElement->imgSize = $imgSize;
+        $listConfigElement->imgSize = serialize($imgSize);
 
         if (!$this->isDryRun()) {
             $listConfigElement->save();

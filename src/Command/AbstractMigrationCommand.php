@@ -9,7 +9,7 @@
 namespace HeimrichHannot\MigrationBundle\Command;
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\Model;
 use Contao\Model\Collection;
 use stdClass;
@@ -21,7 +21,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 abstract class AbstractMigrationCommand extends AbstractLockedCommand
 {
     /**
-     * @var ContaoFrameworkInterface
+     * @var ContaoFramework
      */
     protected $framework;
     /**
@@ -55,7 +55,7 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
      */
     protected $output;
 
-    public function __construct(ContaoFrameworkInterface $framework)
+    public function __construct(ContaoFramework $framework)
     {
         $this->framework = $framework;
         parent::__construct();
@@ -163,7 +163,7 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
 
     protected function configure()
     {
-        $this->addOption('id', 'i', InputOption::VALUE_OPTIONAL, 'Provide the id of a single module that should be migrated.');
+        $this->addOption('ids', 'i', InputOption::VALUE_OPTIONAL, 'Provide the id of a single module or a comma separated list of module ids that should be migrated.');
         $this->addOption('types', 't', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'What module types should be migrated?', static::getTypes());
         $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Performs a run without writing to database and copy templates.');
     }
@@ -203,7 +203,7 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
             return 1;
         }
 
-        if (empty($this->elements = $this->collect($input->getOption('id')))) {
+        if (empty($this->elements = $this->collect($input->getOption('ids')))) {
             $this->io->note('No '.static::getElementName().' of types '.implode(',', $types).' could be found.');
 
             $this->io->success('Finished migration!');
@@ -246,11 +246,11 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
     /**
      * Collect modules.
      *
-     * @param int $id
+     * @param string $ids
      *
      * @return Collection|Model[]|Model|null
      */
-    protected function collect(int $id = null): ?Collection
+    protected function collect(string $ids = null): ?Collection
     {
         $options['column'] = [
             static::getTable().'.type IN ('.implode(',', array_map(function ($type) {
@@ -258,9 +258,13 @@ abstract class AbstractMigrationCommand extends AbstractLockedCommand
             }, static::getTypes())).')',
         ];
 
-        if ($id > 0) {
-            $options['column'][] = static::getTable().'.id = ?';
-            $options['value'][] = $id;
+        if ($ids) {
+            $ids = explode(',', str_replace(' ', '', $ids));
+
+            // avoid sql injection
+            $ids = array_map('intval', $ids);
+
+            $options['column'][] = static::getTable().'.id IN (' . implode(',', $ids) . ')';
         }
 
         $modelClass = Model::getClassFromTable(static::getTable());

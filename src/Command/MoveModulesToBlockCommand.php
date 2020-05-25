@@ -10,7 +10,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 use Contao\ContentModel;
 use Contao\CoreBundle\Command\AbstractLockedCommand;
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\Model;
 use Contao\Model\Collection;
 use Contao\ModuleModel;
@@ -30,7 +30,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class MoveModulesToBlockCommand extends AbstractLockedCommand
 {
     /**
-     * @var ContaoFrameworkInterface
+     * @var ContaoFramework
      */
     private $framework;
     private $dryRun = false;
@@ -51,7 +51,7 @@ class MoveModulesToBlockCommand extends AbstractLockedCommand
      */
     private $io;
 
-    public function __construct(ContaoFrameworkInterface $framework, ModelUtil $modelUtil)
+    public function __construct(ContaoFramework $framework, ModelUtil $modelUtil)
     {
         parent::__construct();
         $this->framework = $framework;

@@ -10,7 +10,7 @@ namespace HeimrichHannot\MigrationBundle\Command;
 
 use Contao\Controller;
 use Contao\CoreBundle\Command\AbstractLockedCommand;
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\Model;
 use Contao\Model\Collection;
 use Contao\ModuleModel;
@@ -77,7 +77,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
     ];
 
     /**
-     * @var ContaoFrameworkInterface
+     * @var ContaoFramework
      */
     protected $framework;
     /**
@@ -112,7 +112,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
      */
     private $containerUtil;
 
-    public function __construct(ContaoFrameworkInterface $framework, ModelUtil $modelUtil, TranslatorInterface $translator, ContainerUtil $containerUtil)
+    public function __construct(ContaoFramework $framework, ModelUtil $modelUtil, TranslatorInterface $translator, ContainerUtil $containerUtil)
     {
         parent::__construct();
         $this->framework = $framework;
@@ -766,8 +766,8 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
             $sorting = $this->addDateRangeFilter($filterConfig, $sorting);
         }
 
-        if (isset($filters['data'])) {
-            $sorting = $this->addDataFilter($filterConfig, $sorting, $filters['config']);
+        if (isset($filters['date'])) {
+            $sorting = $this->addDateFilter($filterConfig, $sorting, $filters['config']);
         }
 
         $sorting = $this->addPublishedFilter($filterConfig, $sorting);
@@ -1124,7 +1124,7 @@ class NewsPlusModuleMigrationCommand extends AbstractLockedCommand
         $this->io->block($helpMessages);
     }
 
-    protected function addDataFilter($filterConfig, $sorting, $config)
+    protected function addDateFilter($filterConfig, $sorting, $config)
     {
         if (!\is_array($config) || !isset($config['news_format'])) {
             return $sorting;

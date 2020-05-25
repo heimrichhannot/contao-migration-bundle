@@ -38,7 +38,7 @@ Options:
 
 Option              | Description
 --------------------|-----
--i, --id[=ID]       | Provide the id of a single modules that should be migrated.
+-i, --ids[=IDS]     | Provide the id of a single module or a comma separated list of module ids that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["newsmenu"]] (multiple values allowed)
 --dry-run           | Performs a run without writing to database and copy templates.
 
@@ -55,7 +55,7 @@ Options:
 
 Option              | Description
 --------------------|-----
--i, --id[=ID]       | Provide the id of a single module that should be migrated.
+-i, --ids[=IDS]     | Provide the id of a single module or a comma separated list of module ids that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
 --dry-run           | Performs a run without writing to database and copy templates.
 
@@ -88,7 +88,7 @@ Options:
 
 Option              | Description
 --------------------|-----
--i, --id[=ID]       | Provide the id of a single module that should be migrated.
+-i, --ids[=IDS]     | Provide the id of a single module or a comma separated list of module ids that should be migrated.
 -t, --types[=TYPES] | What module types should be migrated? [default: ["newsreader","newsreader_plus"]] (multiple values allowed)
 --dry-run           | Performs a run without writing to database and copy templates.
 
@@ -110,7 +110,7 @@ Options:
 
 Option              | Description
 --------------------|-----
--i, --id[=ID]       | Provide the id of a single content element that should be migrated.
+-i, --ids[=IDS]     | Provide the id of a single module or a comma separated list of module ids that should be migrated.
 -t, --types[=TYPES] | What content element types should be migrated? [default: ["owl_newslist"]] (multiple values allowed)
 --dry-run           | Performs a run without writing to database and copy templates.
 

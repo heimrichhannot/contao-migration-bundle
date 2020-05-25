@@ -6,10 +6,6 @@ services:
 
   ## Module Commands
 
-  huh.migration.module.newsreader:
-    class: HeimrichHannot\MigrationBundle\Command\NewsReaderModuleMigrationCommand
-    arguments: ['@contao.framework']
-
   huh.migration.module.newsplus:
     class: HeimrichHannot\MigrationBundle\Command\NewsPlusModuleMigrationCommand
     arguments: ['@contao.framework', '@huh.utils.model', '@translator', '@huh.utils.container']
@@ -17,9 +13,3 @@ services:
   huh.migration.modulestoblock:
     class: HeimrichHannot\MigrationBundle\Command\MoveModulesToBlockCommand
     arguments: ['@contao.framework', '@huh.utils.model']
-
-  ## Database Commands
-
-  huh.migration.database.newstags:
-    class: HeimrichHannot\MigrationBundle\Command\NewsTagsMigrationCommand
-    arguments: ['@service_container']

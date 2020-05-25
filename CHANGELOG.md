@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2020-05-13
+
+- [BC BREAK] descendants of `AbstractMigrationCommand` now accept `ids` as a comma separated list instead of `id`
+- fixed typos (date vs. data)
+- added possibility to restrict importing to certain news archives for some commands
+- [BC BREAK] fixed tags import for latest tags bundle
+- enhanced list and reader import
+
 ## [0.8.0] - 2020-05-13
 
 - fixed syndication support in `NewsReaderModuleMigrationCommand`

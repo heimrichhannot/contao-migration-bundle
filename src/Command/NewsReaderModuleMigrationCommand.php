@@ -99,7 +99,6 @@ class NewsReaderModuleMigrationCommand extends AbstractModuleMigrationCommand
         $this->readerConfig->limitFormattedFields = 1;
         $this->readerConfig->itemTemplate = $this->module->news_template;
         $this->readerConfig->formattedFields = ['headline', 'teaser', 'singleSRC'];
-        $this->readerConfig->formattedFields = ['headline', 'teaser', 'singleSRC'];
         $this->readerConfig->publishedField = 'published';
         $this->readerConfig->headTags = [
             ['service' => 'huh.head.tag.title', 'pattern' => '%headline%'],

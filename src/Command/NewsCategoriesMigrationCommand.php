@@ -9,7 +9,7 @@
 namespace HeimrichHannot\MigrationBundle\Command;
 
 use Contao\CoreBundle\Command\AbstractLockedCommand;
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\Database;
 use Contao\System;
 use Doctrine\DBAL\Query\QueryBuilder;
@@ -72,7 +72,7 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
     protected $primaryCategoryField;
 
     /**
-     * @var ContaoFrameworkInterface
+     * @var ContaoFramework
      */
     private $framework;
     /**
@@ -80,7 +80,7 @@ class NewsCategoriesMigrationCommand extends AbstractLockedCommand
      */
     private $databaseUtil;
 
-    public function __construct(ContaoFrameworkInterface $framework, DatabaseUtil $databaseUtil)
+    public function __construct(ContaoFramework $framework, DatabaseUtil $databaseUtil)
     {
         parent::__construct();
         $this->framework = $framework;
